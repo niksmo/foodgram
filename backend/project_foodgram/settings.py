@@ -99,4 +99,20 @@ REST_FRAMEWORK = {
 
 DJOSER = {
     'LOGIN_FIELD': 'email',
+    'HIDE_USERS': False,
+    'PERMISSIONS': {
+        'user': ['rest_framework.permissions.AllowAny'],
+        'user_list': ['rest_framework.permissions.AllowAny'],
+        'user_create': ['rest_framework.permissions.AllowAny'],
+        'set_password': ['djoser.permissions.CurrentUserOrAdmin'],
+        'token_create': ['rest_framework.permissions.AllowAny'],
+        'token_destroy': ['rest_framework.permissions.IsAuthenticated'],
+        'activation': ['api.permissions.NotAllowAny'],
+        'password_reset': ['api.permissions.NotAllowAny'],
+        'password_reset_confirm': ['api.permissions.NotAllowAny'],
+        'username_reset': ['api.permissions.NotAllowAny'],
+        'username_reset_confirm': ['api.permissions.NotAllowAny'],
+        'set_username': ['api.permissions.NotAllowAny'],
+        'user_delete': ['api.permissions.NotAllowAny'],
+    },
 }
