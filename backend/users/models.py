@@ -3,7 +3,7 @@ from django.db import models
 
 
 class MyUser(AbstractUser):
-    avatar = models.ImageField(upload_to='avatars/', blank=True)
+    avatar = models.ImageField('Аватар', upload_to='avatars/', blank=True)
 
     @property
     def is_admin(self) -> bool:

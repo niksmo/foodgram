@@ -15,6 +15,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework',
+    'rest_framework.authtoken',
+    'djoser',
     'users.apps.UsersConfig',
     'foodgram.apps.FoodgramConfig',
     'api.apps.ApiConfig'
@@ -87,3 +90,13 @@ STATIC_ROOT = BASE_DIR / 'collected_static/static'
 MEDIA_URL = 'media/'
 
 MEDIA_ROOT = BASE_DIR / 'media'
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.TokenAuthentication',
+    ),
+}
+
+DJOSER = {
+    'LOGIN_FIELD': 'email',
+}
