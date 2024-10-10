@@ -1,0 +1,9 @@
+asgiref==3.8.1
+Django==4.2.16
+flake8==7.1.1
+flake8-import-order==0.18.2
+mccabe==0.7.0
+pycodestyle==2.12.1
+pyflakes==3.2.0
+sqlparse==0.5.1
+typing_extensions==4.12.2
