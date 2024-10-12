@@ -5,7 +5,6 @@ from drf_extra_fields.fields import Base64ImageField
 from rest_framework.request import Request
 from rest_framework.serializers import ModelSerializer, SerializerMethodField
 
-
 from users.models import MyUser
 
 User = get_user_model()
