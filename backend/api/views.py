@@ -1,5 +1,3 @@
-import os
-
 from djoser.conf import settings
 from djoser.views import UserViewSet as DjoserUserViewSet
 
@@ -27,7 +25,6 @@ class UserViewSet(DjoserUserViewSet):
             detail=False, permission_classes=[IsAuthenticated])
     def avatar(self, request: Request, *args, **kwargs) -> Response:
         if request.method and request.method.lower() == 'delete':
-            os.unlink(request.user.avatar.path)
             request.user.avatar = None
             request.user.save(update_fields=('avatar',))
             return Response(status=204)
