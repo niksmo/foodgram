@@ -28,6 +28,9 @@ class Command(BaseCommand):
         except json.JSONDecodeError as exc:
             raise CommandError(f'Json is broken: {exc!r}')
 
+        if not isinstance(data, list):
+            raise CommandError(f'Expected data items in list')
+
         for item in data:
             try:
                 Ingredient.objects.create(**item)
