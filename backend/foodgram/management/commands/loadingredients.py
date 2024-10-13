@@ -29,7 +29,7 @@ class Command(BaseCommand):
             raise CommandError(f'Json is broken: {exc!r}')
 
         if not isinstance(data, list):
-            raise CommandError(f'Expected data items in list')
+            raise CommandError('Expected data items in list')
 
         for item in data:
             try:

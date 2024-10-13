@@ -9,13 +9,13 @@ class MyUser(AbstractUser):
 
     follow = models.ManyToManyField('self',
                                     symmetrical=False,
-                                    through='Subscriptions',
+                                    through='Subscription',
                                     through_fields=('user', 'author'),
                                     related_name='+')
 
     followers = models.ManyToManyField('self',
                                        symmetrical=False,
-                                       through='Subscriptions',
+                                       through='Subscription',
                                        through_fields=('author', 'user'),
                                        related_name='+')
 
@@ -27,7 +27,7 @@ class MyUser(AbstractUser):
         return self.is_staff
 
 
-class Subscriptions(models.Model):
+class Subscription(models.Model):
     user = models.ForeignKey(
         MyUser, on_delete=models.CASCADE, related_name='+')
     author = models.ForeignKey(

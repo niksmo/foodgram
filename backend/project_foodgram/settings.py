@@ -61,7 +61,7 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'foodgram',
-        'USER': 'postgres',
+        'USER': 'foodgram',
         'PASSWORD': 'postgres',
         'HOST': '127.0.0.1',
         'PORT': 5432,

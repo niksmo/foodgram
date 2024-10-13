@@ -13,7 +13,7 @@ User = get_user_model()
 
 
 class UserViewSet(DjoserUserViewSet):
-    queryset = User.objects.prefetch_related('followers')
+    queryset = User.objects.all()
 
     def get_serializer_class(self) -> ModelSerializer:
         if self.action == 'avatar':

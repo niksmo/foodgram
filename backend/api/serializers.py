@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.db.models import Manager
 
 from drf_extra_fields.fields import Base64ImageField
 
@@ -20,14 +21,16 @@ class UserSerializer(ModelSerializer):
                   'email', 'is_subscribed', 'avatar')
         read_only_fields = ('id', 'is_subscribed', 'avatar')
 
-    def get_is_subscribed(self, user_instance: MyUser):
+    def get_is_subscribed(self, obj: MyUser):
         request: Request = self.context['request']
         if not request.auth:
             return False
 
-        return user_instance.followers.filter(
-            pk=request.user.id
-        ).exists()
+        if not hasattr(self, 'user_follow'):
+            self.user_follow = {author.pk
+                                for author in request.user.follow.all()}
+
+        return obj.pk in self.user_follow
 
 
 class AvatarSerializer(ModelSerializer):
