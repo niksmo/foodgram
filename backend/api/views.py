@@ -13,8 +13,8 @@ from rest_framework.response import Response
 from rest_framework.serializers import ModelSerializer
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
-from foodgram.models import Ingredient
-from api.serializers import IngredientSerializer
+from foodgram.models import Ingredient, Tag
+from api.serializers import IngredientSerializer, TagSerializer
 from api.filters import IngredientListFilter
 
 User = get_user_model()
@@ -44,7 +44,7 @@ class UserViewSet(DjoserUserViewSet):
             request.user.save(update_fields=('avatar',))
             return Response(status=204)
         self.get_object = self.get_instance
-        return self.partial_update(request, *args, **kwargs)
+        return self.update(request, *args, **kwargs)
 
 
 class IngredientViewSet(ReadOnlyModelViewSet):
@@ -54,6 +54,8 @@ class IngredientViewSet(ReadOnlyModelViewSet):
     filter_backends = (django_filters.rest_framework.DjangoFilterBackend,)
     filterset_class = IngredientListFilter
 
-    def filter_queryset(self, queryset):
-        breakpoint()
-        return super().filter_queryset(queryset)
+
+class TagViewSet(ReadOnlyModelViewSet):
+    queryset = Tag.objects.all()
+    serializer_class = TagSerializer
+    pagination_class = None

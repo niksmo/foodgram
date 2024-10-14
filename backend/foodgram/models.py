@@ -24,8 +24,7 @@ class Tag(models.Model):
 
     slug = models.SlugField(max_length=32,
                             unique=True,
-                            blank=True,
-                            null=True)
+                            blank=False)
 
     class Meta:
         pass

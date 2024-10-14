@@ -1,15 +1,22 @@
 from django.contrib.auth import get_user_model
-from django.db.models import Manager
+
+import djoser.serializers as djoser_serializers
 
 from drf_extra_fields.fields import Base64ImageField
 
 from rest_framework.request import Request
 from rest_framework.serializers import ModelSerializer, SerializerMethodField
 
-from foodgram.models import Ingredient
+from foodgram.models import Ingredient, Tag
 from users.models import MyUser
 
 User = get_user_model()
+
+
+class UserCreateSerializer(djoser_serializers.UserCreateSerializer):
+    class Meta(djoser_serializers.UserCreateSerializer.Meta):
+        extra_kwargs = {'first_name': {'required': True},
+                        'last_name': {'required': True}}
 
 
 class UserSerializer(ModelSerializer):
@@ -45,4 +52,11 @@ class IngredientSerializer(ModelSerializer):
 
     class Meta:
         model = Ingredient
+        fields = '__all__'
+
+
+class TagSerializer(ModelSerializer):
+
+    class Meta:
+        model = Tag
         fields = '__all__'
