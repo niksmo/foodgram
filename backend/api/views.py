@@ -1,5 +1,8 @@
 from django.contrib.auth import get_user_model
 
+import django_filters
+
+import django_filters.fields
 from djoser.conf import settings
 from djoser.views import UserViewSet as DjoserUserViewSet
 
@@ -8,6 +11,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.serializers import ModelSerializer
+from rest_framework.viewsets import ReadOnlyModelViewSet
+
+from foodgram.models import Ingredient
+from api.serializers import IngredientSerializer
+from api.filters import IngredientListFilter
 
 User = get_user_model()
 
@@ -37,3 +45,15 @@ class UserViewSet(DjoserUserViewSet):
             return Response(status=204)
         self.get_object = self.get_instance
         return self.partial_update(request, *args, **kwargs)
+
+
+class IngredientViewSet(ReadOnlyModelViewSet):
+    queryset = Ingredient.objects.all()
+    serializer_class = IngredientSerializer
+    pagination_class = None
+    filter_backends = (django_filters.rest_framework.DjangoFilterBackend,)
+    filterset_class = IngredientListFilter
+
+    def filter_queryset(self, queryset):
+        breakpoint()
+        return super().filter_queryset(queryset)

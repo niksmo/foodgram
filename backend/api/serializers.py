@@ -6,13 +6,13 @@ from drf_extra_fields.fields import Base64ImageField
 from rest_framework.request import Request
 from rest_framework.serializers import ModelSerializer, SerializerMethodField
 
+from foodgram.models import Ingredient
 from users.models import MyUser
 
 User = get_user_model()
 
 
 class UserSerializer(ModelSerializer):
-
     is_subscribed = SerializerMethodField()
 
     class Meta:
@@ -39,3 +39,10 @@ class AvatarSerializer(ModelSerializer):
     class Meta:
         model = User
         fields = ('avatar',)
+
+
+class IngredientSerializer(ModelSerializer):
+
+    class Meta:
+        model = Ingredient
+        fields = '__all__'
