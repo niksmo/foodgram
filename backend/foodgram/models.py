@@ -41,7 +41,7 @@ class Recipe(models.Model):
     image = models.ImageField('Картинка',
                               upload_to='recipes/')
 
-    cooking_time = models.SmallIntegerField('Время приголовления',
+    cooking_time = models.SmallIntegerField('Время приготовления',
                                             help_text='минут')
 
     author = models.ForeignKey(User,
@@ -52,7 +52,7 @@ class Recipe(models.Model):
                                          through='RecipeIngredient')
 
     tags = models.ManyToManyField(Tag,
-                                  through='TagRecipe')
+                                  through='RecipeTag')
 
     class Meta:
         constraints = [
@@ -61,9 +61,23 @@ class Recipe(models.Model):
         ]
 
 
+class MyQeurySet(models.QuerySet):
+    def objects(self):
+        return self.select_related('ingredient')
+
+
+MyBaseManager = MyQeurySet.as_manager()
+
+
 class RecipeIngredient(models.Model):
-    ingredient = models.ForeignKey(Ingredient, on_delete=models.CASCADE)
-    recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
+    ingredient = models.ForeignKey(Ingredient,
+                                   on_delete=models.CASCADE,
+                                   related_name='recipes')
+
+    recipe = models.ForeignKey(Recipe,
+                               on_delete=models.CASCADE,
+                               related_name='recipe_ingredient')
+
     amount = models.SmallIntegerField('Количество')
 
     class Meta:
@@ -73,6 +87,6 @@ class RecipeIngredient(models.Model):
         ]
 
 
-class TagRecipe(models.Model):
+class RecipeTag(models.Model):
     tag = models.ForeignKey(Tag, on_delete=models.CASCADE)
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)

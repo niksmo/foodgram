@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 from django.contrib.auth import get_user_model
 
 import django_filters
@@ -7,17 +9,37 @@ from djoser.conf import settings
 from djoser.views import UserViewSet as DjoserUserViewSet
 
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import (IsAuthenticated,
+                                        IsAuthenticatedOrReadOnly)
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.serializers import ModelSerializer
-from rest_framework.viewsets import ReadOnlyModelViewSet
+from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
-from foodgram.models import Ingredient, Tag
-from api.serializers import IngredientSerializer, TagSerializer
+from foodgram.models import Ingredient, Recipe, Tag
+
+from api.permissions import AuthorAdminOrReadOnly
+from api.serializers import (IngredientSerializer, RecipeSerializer,
+                             TagSerializer)
 from api.filters import IngredientListFilter
 
 User = get_user_model()
+
+
+@dataclass(frozen=True)
+class HttpMethod:
+    GET = 'get'
+    POST = 'post'
+    DELETE = 'delete'
+    PUT = 'put'
+    PATCH = 'patch'
+    HEAD = 'head'
+    OPTIONS = 'options'
+
+    @classmethod
+    def all(cls):
+        return [cls.GET, cls.POST, cls.DELETE, cls.PUT,
+                cls.PATCH, cls.HEAD, cls.OPTIONS]
 
 
 class UserViewSet(DjoserUserViewSet):
@@ -51,7 +73,7 @@ class IngredientViewSet(ReadOnlyModelViewSet):
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
     pagination_class = None
-    filter_backends = (django_filters.rest_framework.DjangoFilterBackend,)
+    filter_backends = [django_filters.rest_framework.DjangoFilterBackend]
     filterset_class = IngredientListFilter
 
 
@@ -59,3 +81,23 @@ class TagViewSet(ReadOnlyModelViewSet):
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
     pagination_class = None
+
+
+class RecipeViewSet(ModelViewSet):
+    queryset = Recipe.objects.select_related('author').prefetch_related('tags')
+    serializer_class = RecipeSerializer
+    filter_backends = [django_filters.rest_framework.DjangoFilterBackend]
+    permission_classes = [IsAuthenticatedOrReadOnly, AuthorAdminOrReadOnly]
+
+    http_method_names = [
+        HttpMethod.GET,
+        HttpMethod.POST,
+        HttpMethod.PATCH,
+        HttpMethod.DELETE,
+        HttpMethod.HEAD,
+        HttpMethod.OPTIONS
+    ]
+
+    # @action(['get'], detail=True)
+    # def get_link(self):
+    #     pass

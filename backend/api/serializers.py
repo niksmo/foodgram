@@ -5,9 +5,10 @@ import djoser.serializers as djoser_serializers
 from drf_extra_fields.fields import Base64ImageField
 
 from rest_framework.request import Request
-from rest_framework.serializers import ModelSerializer, SerializerMethodField
+from rest_framework.serializers import (ModelSerializer, SerializerMethodField,
+                                        IntegerField, ReadOnlyField)
 
-from foodgram.models import Ingredient, Tag
+from foodgram.models import Ingredient, Recipe, RecipeIngredient, Tag
 from users.models import MyUser
 
 User = get_user_model()
@@ -49,14 +50,34 @@ class AvatarSerializer(ModelSerializer):
 
 
 class IngredientSerializer(ModelSerializer):
-
     class Meta:
         model = Ingredient
         fields = '__all__'
 
 
 class TagSerializer(ModelSerializer):
-
     class Meta:
         model = Tag
+        fields = '__all__'
+
+
+class RecipeIngredientSerializer(ModelSerializer):
+    id = IntegerField(source='ingredient.id')
+    name = ReadOnlyField(source='ingredient.name')
+    measurement_unit = ReadOnlyField(source='ingredient.measurement_unit')
+
+    class Meta:
+        model = RecipeIngredient
+        fields = ('id', 'name', 'measurement_unit', 'amount')
+
+
+class RecipeSerializer(ModelSerializer):
+    tags = TagSerializer(many=True)
+    author = UserSerializer()
+    ingredients = RecipeIngredientSerializer(many=True,
+                                             source='recipe_ingredient')
+    image = Base64ImageField()
+
+    class Meta:
+        model = Recipe
         fields = '__all__'
