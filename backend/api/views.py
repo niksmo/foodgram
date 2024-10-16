@@ -1,10 +1,11 @@
+from typing import Type
+
 from dataclasses import dataclass
 
 from django.contrib.auth import get_user_model
 
 import django_filters
 
-import django_filters.fields
 from djoser.conf import settings
 from djoser.views import UserViewSet as DjoserUserViewSet
 
@@ -16,12 +17,12 @@ from rest_framework.response import Response
 from rest_framework.serializers import ModelSerializer
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
-from foodgram.models import Ingredient, Recipe, Tag
-
-from api.permissions import AuthorAdminOrReadOnly
-from api.serializers import (IngredientSerializer, RecipeSerializer,
-                             TagSerializer)
 from api.filters import IngredientListFilter
+from api.permissions import AuthorAdminOrReadOnly
+from api.serializers import (
+    IngredientSerializer, RecipeSerializer, TagSerializer)
+
+from foodgram.models import Ingredient, Recipe, Tag
 
 User = get_user_model()
 
@@ -36,16 +37,19 @@ class HttpMethod:
     HEAD = 'head'
     OPTIONS = 'options'
 
-    @classmethod
-    def all(cls):
-        return [cls.GET, cls.POST, cls.DELETE, cls.PUT,
-                cls.PATCH, cls.HEAD, cls.OPTIONS]
-
 
 class UserViewSet(DjoserUserViewSet):
+    http_method_names = [
+        HttpMethod.GET,
+        HttpMethod.POST,
+        HttpMethod.PUT,
+        HttpMethod.DELETE,
+        HttpMethod.HEAD,
+        HttpMethod.OPTIONS
+    ]
     queryset = User.objects.all()
 
-    def get_serializer_class(self) -> ModelSerializer:
+    def get_serializer_class(self) -> Type[ModelSerializer]:
         if self.action == 'avatar':
             return settings.SERIALIZERS.avatar
         return super().get_serializer_class()
@@ -84,11 +88,6 @@ class TagViewSet(ReadOnlyModelViewSet):
 
 
 class RecipeViewSet(ModelViewSet):
-    queryset = Recipe.objects.select_related('author').prefetch_related('tags')
-    serializer_class = RecipeSerializer
-    filter_backends = [django_filters.rest_framework.DjangoFilterBackend]
-    permission_classes = [IsAuthenticatedOrReadOnly, AuthorAdminOrReadOnly]
-
     http_method_names = [
         HttpMethod.GET,
         HttpMethod.POST,
@@ -97,6 +96,10 @@ class RecipeViewSet(ModelViewSet):
         HttpMethod.HEAD,
         HttpMethod.OPTIONS
     ]
+    queryset = Recipe.objects.select_related('author').prefetch_related('tags')
+    serializer_class = RecipeSerializer
+    filter_backends = [django_filters.rest_framework.DjangoFilterBackend]
+    permission_classes = [IsAuthenticatedOrReadOnly, AuthorAdminOrReadOnly]
 
     # @action(['get'], detail=True)
     # def get_link(self):
