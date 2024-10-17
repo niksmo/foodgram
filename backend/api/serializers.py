@@ -1,5 +1,6 @@
 from typing import Any, Type
 
+from django.db import transaction
 from django.db.models import Model
 from django.contrib.auth import get_user_model
 
@@ -8,8 +9,8 @@ import djoser.serializers as djoser_serializers
 from drf_extra_fields.fields import Base64ImageField
 
 from rest_framework import serializers
+from rest_framework.exceptions import APIException, ValidationError
 from rest_framework.request import Request
-from rest_framework.exceptions import ValidationError
 
 import api.validators as api_validators
 import foodgram.models as fg_models
@@ -101,10 +102,9 @@ class TagsIngredientsForRecipeSerialiser(serializers.Serializer):
         allow_empty=False
     )
 
-    def _validate_objects_exists(self,
-                                 model: Type[Model],
+    def _validate_objects_exists(self, model: Type[Model],
                                  data: dict[str, Any],
-                                 errors: dict[str, Any]):
+                                 errors: dict[str, Any]) -> None:
         values = data[(field := f'{model.__name__.lower()}s')]
 
         if isinstance(values[0], dict):
@@ -122,7 +122,7 @@ class TagsIngredientsForRecipeSerialiser(serializers.Serializer):
                              f'{sorted(not_exists)} '
                              'не существует.')
 
-    def validate(self, data: dict[str, Any]):
+    def validate(self, data: dict[str, Any]) -> dict[str, Any]:
         errors = {}
         for model in (fg_models.Tag, fg_models.Ingredient):
             self._validate_objects_exists(model, data, errors)
@@ -153,7 +153,7 @@ class RecipeSerializer(serializers.ModelSerializer):
     # def is_in_shopping_cart(self, obj: Recipe) -> bool:
         # pass
 
-    def to_internal_value(self, data: dict[str, Any]):
+    def to_internal_value(self, data: dict[str, Any]) -> dict[str, Any]:
         errors = {}
         try:
             data.update(super().to_internal_value(data))
@@ -169,24 +169,66 @@ class RecipeSerializer(serializers.ModelSerializer):
 
         return data
 
-    def create(self, validated_data: dict[str, Any]):
+    def create(self, validated_data: dict[str, Any]) -> fg_models.Recipe:
         tags = validated_data.pop('tags')
         ingredients = validated_data.pop('ingredients')
 
-        recipe = fg_models.Recipe.objects.create(
-            author=self.context['request'].user, **validated_data)
+        try:
+            with transaction.atomic():
+                recipe = fg_models.Recipe.objects.create(
+                    author=self.context['request'].user, **validated_data
+                )
 
-        fg_models.RecipeTag.objects.bulk_create(
-            (fg_models.RecipeTag(recipe=recipe, tag_id=id)
-             for id in tags)
-        )
+                fg_models.RecipeTag.objects.bulk_create(
+                    (fg_models.RecipeTag(recipe=recipe, tag_id=id)
+                     for id in tags)
+                )
 
-        fg_models.RecipeIngredient.objects.bulk_create(
-            (fg_models.RecipeIngredient(
-                recipe=recipe,
-                ingredient_id=item['id'],
-                amount=item['amount']
-            )
-                for item in ingredients)
-        )
+                fg_models.RecipeIngredient.objects.bulk_create(
+                    (fg_models.RecipeIngredient(
+                        recipe=recipe,
+                        ingredient_id=item['id'],
+                        amount=item['amount']
+                    )
+                        for item in ingredients)
+                )
+        except Exception:
+            raise APIException()
+
         return recipe
+
+    def update(self, instance: fg_models.Recipe,
+               validated_data: dict[str, Any]) -> fg_models.Recipe:
+        tags = validated_data.pop('tags')
+        ingredients = validated_data.pop('ingredients')
+
+        try:
+            with transaction.atomic():
+                fg_models.Recipe.objects.filter(
+                    pk=instance.pk
+                ).update(**validated_data)
+
+                fg_models.RecipeTag.objects.filter(
+                    recipe_id=instance.pk
+                ).delete()
+                fg_models.RecipeIngredient.objects.filter(
+                    recipe_id=instance.pk
+                ).delete()
+
+                fg_models.RecipeTag.objects.bulk_create(
+                    (fg_models.RecipeTag(recipe_id=instance.pk, tag_id=id)
+                     for id in tags)
+                )
+
+                fg_models.RecipeIngredient.objects.bulk_create(
+                    (fg_models.RecipeIngredient(
+                        recipe_id=instance.pk,
+                        ingredient_id=item['id'],
+                        amount=item['amount']
+                    )
+                        for item in ingredients)
+                )
+        except Exception:
+            raise APIException()
+
+        return fg_models.Recipe.objects.get(pk=instance.pk)
