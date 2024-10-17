@@ -91,9 +91,6 @@ class MyQeurySet(models.QuerySet):
         return self.select_related('ingredient')
 
 
-MyBaseManager = MyQeurySet.as_manager()
-
-
 class RecipeIngredient(models.Model):
     ingredient = models.ForeignKey(
         Ingredient,
@@ -124,3 +121,17 @@ class RecipeIngredient(models.Model):
 class RecipeTag(models.Model):
     tag = models.ForeignKey(Tag, on_delete=models.CASCADE)
     recipe = models.ForeignKey(Recipe, on_delete=models.CASCADE)
+
+
+class FavoriteRecipe(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='favorite_recipes'
+    )
+
+    recipe = models.ForeignKey(
+        Recipe,
+        on_delete=models.CASCADE,
+        related_name='in_favorites'
+    )

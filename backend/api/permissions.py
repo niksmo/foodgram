@@ -7,8 +7,11 @@ class NotAllowAny(BasePermission):
         raise NotFound
 
 
-class AuthorAdminOrReadOnly(BasePermission):
-    def has_object_permission(self, request, view, obj):
+class IsOwnerAdminOrReadOnly(BasePermission):
+    def __init__(self, owner_attr='stub') -> None:
+        self.owner_attr = owner_attr
+
+    def has_object_permission(self, request, view, obj) -> bool:
         return (request.method in SAFE_METHODS
-                or obj.author == request.user
+                or getattr(obj, self.owner_attr, False) == request.user
                 or request.user.is_admin)

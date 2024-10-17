@@ -3,12 +3,13 @@ from typing import Any, Type
 from django.db import transaction
 from django.db.models import Model
 from django.contrib.auth import get_user_model
+from django.shortcuts import get_object_or_404
 
 import djoser.serializers as djoser_serializers
 
 from drf_extra_fields.fields import Base64ImageField
 
-from rest_framework import serializers
+from rest_framework import serializers, status
 from rest_framework.exceptions import APIException, ValidationError
 from rest_framework.request import Request
 
@@ -232,3 +233,34 @@ class RecipeSerializer(serializers.ModelSerializer):
             raise APIException()
 
         return fg_models.Recipe.objects.get(pk=instance.pk)
+
+
+serializers.CurrentUserDefault
+
+
+class FavoriteRecipeSerializer(serializers.Serializer):
+    recipe_id = serializers.IntegerField(write_only=True, min_value=1)
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+
+    id = serializers.IntegerField(read_only=True)
+    name = serializers.CharField(read_only=True)
+    image = serializers.URLField(read_only=True)
+    cooking_time = serializers.IntegerField(read_only=True)
+
+    def validate(self, data):
+        recipe = get_object_or_404(fg_models.Recipe, pk=data['recipe_id'])
+
+        if recipe.in_favorites.filter(user=data['user']).exists():
+            raise ValidationError(
+                detail='Рецепт уже добавлен в избранные.',
+                code=status.HTTP_400_BAD_REQUEST
+            )
+
+        return data
+
+    def create(self, validated_data) -> fg_models.Recipe:
+        recipe = fg_models.FavoriteRecipe.objects.create(
+            user=validated_data['user'],
+            recipe_id=validated_data['recipe_id']
+        ).recipe
+        return recipe
