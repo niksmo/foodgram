@@ -7,8 +7,6 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Model
 from django.shortcuts import get_object_or_404
 
-import django_filters
-
 from djoser.conf import settings
 from djoser.views import UserViewSet as DjoserUserViewSet
 
@@ -21,7 +19,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.serializers import ModelSerializer, Serializer
 
-from api.filters import IngredientListFilter
+from api.filters import IngredientListFilter, RecipeListFilter
 from api.permissions import IsOwnerAdminOrReadOnly
 from api.serializers import (IngredientSerializer, RecipeSerializer,
                              TagSerializer, FavoriteRecipeSerializer,
@@ -87,7 +85,6 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = fg_models.Ingredient.objects.all()
     serializer_class = IngredientSerializer
     pagination_class = None
-    filter_backends = [django_filters.rest_framework.DjangoFilterBackend]
     filterset_class = IngredientListFilter
 
 
@@ -115,9 +112,13 @@ class RecipeViewSet(viewsets.ModelViewSet):
         'author'
     ).prefetch_related('tags')
     serializer_class = RecipeSerializer
-    filter_backends = [django_filters.rest_framework.DjangoFilterBackend]
+    filterset_class = RecipeListFilter
     permission_classes = [IsAuthenticatedOrReadOnly,
                           partial(IsOwnerAdminOrReadOnly, 'author')]
+
+    # DEBUG
+    def filter_queryset(self, queryset):
+        return super().filter_queryset(queryset)
 
     def get_serializer_class(self) -> Type[Serializer]:
         if self.action == 'favorite':
