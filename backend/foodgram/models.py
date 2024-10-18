@@ -135,3 +135,17 @@ class FavoriteRecipe(models.Model):
         on_delete=models.CASCADE,
         related_name='in_favorites'
     )
+
+
+class ShoppingCartRecipe(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='shpping_cart_recipes'
+    )
+
+    recipe = models.ForeignKey(
+        Recipe,
+        on_delete=models.CASCADE,
+        related_name='in_shopping_carts'
+    )

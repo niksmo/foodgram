@@ -4,6 +4,7 @@ from functools import partial
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Model
 from django.shortcuts import get_object_or_404
 
 import django_filters
@@ -14,7 +15,8 @@ from djoser.views import UserViewSet as DjoserUserViewSet
 from rest_framework.decorators import action
 from rest_framework.permissions import (IsAuthenticated,
                                         IsAuthenticatedOrReadOnly)
-from rest_framework import exceptions, status, viewsets
+from rest_framework import status, viewsets
+from rest_framework.exceptions import ValidationError
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.serializers import ModelSerializer, Serializer
@@ -22,7 +24,8 @@ from rest_framework.serializers import ModelSerializer, Serializer
 from api.filters import IngredientListFilter
 from api.permissions import IsOwnerAdminOrReadOnly
 from api.serializers import (IngredientSerializer, RecipeSerializer,
-                             TagSerializer, FavoriteRecipeSerializer)
+                             TagSerializer, FavoriteRecipeSerializer,
+                             ShoppingCartRecipeSerializer)
 
 import foodgram.models as fg_models
 
@@ -119,31 +122,62 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self) -> Type[Serializer]:
         if self.action == 'favorite':
             return FavoriteRecipeSerializer
+        elif self.action == 'shopping_cart':
+            return ShoppingCartRecipeSerializer
         return super().get_serializer_class()
 
     # @action(['get'], detail=True)
     # def get_link(self):
     #     pass
 
-    @action([HttpMethod.POST, HttpMethod.DELETE],
-            detail=True,
+    @action([HttpMethod.POST, HttpMethod.DELETE], detail=True,
             permission_classes=[IsAuthenticatedOrReadOnly,
                                 partial(IsOwnerAdminOrReadOnly, 'user')])
     def favorite(self, request: Request, pk: str) -> Response:
+        return self.favorite_and_shopping_cart(request, pk,
+                                               fg_models.FavoriteRecipe)
+
+    @action([HttpMethod.POST, HttpMethod.DELETE], detail=True,
+            permission_classes=[IsAuthenticatedOrReadOnly,
+                                partial(IsOwnerAdminOrReadOnly, 'user')])
+    def shopping_cart(self, request: Request, pk: str) -> Response:
+        return self.favorite_and_shopping_cart(request, pk,
+                                               fg_models.ShoppingCartRecipe)
+
+    @action([HttpMethod.GET], detail=False,
+            permission_classes=[IsAuthenticated])
+    def download_shopping_cart(self, request: Request) -> Response:
+        return Response(data={'info': 'IN DEV! Not implemented'},
+                        status=status.HTTP_501_NOT_IMPLEMENTED)
+
+    def favorite_and_shopping_cart(
+        self,
+        request: Request,
+        pk: str,
+        intermediate_model: Type[Model]
+    ) -> Response:
         if request.method and request.method.lower() == HttpMethod.DELETE:
             recipe = get_object_or_404(fg_models.Recipe.objects, pk=pk)
             try:
-                favorite_recipe = recipe.in_favorites.get(user=request.user)
+                obj = intermediate_model.objects.get(
+                    user=request.user, recipe=recipe)
             except ObjectDoesNotExist:
-                raise exceptions.ValidationError(
-                    'Рецепт не был добавлен в избранное.'
-                )
+                raise ValidationError('Рецепт не был добавлен.')
 
-            self.check_object_permissions(self.request, favorite_recipe)
+            self.check_object_permissions(self.request, obj)
             return Response(status=status.HTTP_204_NO_CONTENT)
 
-        serializer: Serializer = self.get_serializer(data={'recipe_id': pk})
+        serializer = self.get_serializer(data={'recipe_id': pk})
         serializer.is_valid(raise_exception=True)
+        recipe = get_object_or_404(fg_models.Recipe, pk=pk)
+
+        if intermediate_model.objects.filter(
+                user=request.user,
+                recipe=recipe
+        ).exists():
+            raise ValidationError(detail='Рецепт уже добавлен.',
+                                  code=status.HTTP_400_BAD_REQUEST)
+
         self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED,

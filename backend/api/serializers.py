@@ -3,13 +3,12 @@ from typing import Any, Type
 from django.db import transaction
 from django.db.models import Model
 from django.contrib.auth import get_user_model
-from django.shortcuts import get_object_or_404
 
 import djoser.serializers as djoser_serializers
 
 from drf_extra_fields.fields import Base64ImageField
 
-from rest_framework import serializers, status
+from rest_framework import serializers
 from rest_framework.exceptions import APIException, ValidationError
 from rest_framework.request import Request
 
@@ -235,32 +234,30 @@ class RecipeSerializer(serializers.ModelSerializer):
         return fg_models.Recipe.objects.get(pk=instance.pk)
 
 
-serializers.CurrentUserDefault
-
-
-class FavoriteRecipeSerializer(serializers.Serializer):
+class FavoriteAndShoppingCart(serializers.ModelSerializer):
     recipe_id = serializers.IntegerField(write_only=True, min_value=1)
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
 
-    id = serializers.IntegerField(read_only=True)
-    name = serializers.CharField(read_only=True)
-    image = serializers.URLField(read_only=True)
-    cooking_time = serializers.IntegerField(read_only=True)
+    class Meta:
+        model = fg_models.Recipe
+        create_model = Model
+        fields = ('id', 'name', 'image', 'cooking_time', 'recipe_id', 'user')
+        extra_kwargs = {
+            'id': {'read_only': True},
+            'name': {'read_only': True},
+            'image': {'read_only': True},
+            'cooking_time': {'read_only': True}
+        }
 
-    def validate(self, data):
-        recipe = get_object_or_404(fg_models.Recipe, pk=data['recipe_id'])
+    def create(self, validated_data: dict[str, Any]):
+        return self.Meta.create_model.objects.create(**validated_data).recipe
 
-        if recipe.in_favorites.filter(user=data['user']).exists():
-            raise ValidationError(
-                detail='Рецепт уже добавлен в избранные.',
-                code=status.HTTP_400_BAD_REQUEST
-            )
 
-        return data
+class FavoriteRecipeSerializer(FavoriteAndShoppingCart):
+    class Meta(FavoriteAndShoppingCart.Meta):
+        create_model = fg_models.FavoriteRecipe
 
-    def create(self, validated_data) -> fg_models.Recipe:
-        recipe = fg_models.FavoriteRecipe.objects.create(
-            user=validated_data['user'],
-            recipe_id=validated_data['recipe_id']
-        ).recipe
-        return recipe
+
+class ShoppingCartRecipeSerializer(FavoriteAndShoppingCart):
+    class Meta(FavoriteAndShoppingCart.Meta):
+        create_model = fg_models.ShoppingCartRecipe
