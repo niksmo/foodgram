@@ -116,10 +116,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticatedOrReadOnly,
                           partial(IsOwnerAdminOrReadOnly, 'author')]
 
-    # DEBUG
-    def filter_queryset(self, queryset):
-        return super().filter_queryset(queryset)
-
     def get_serializer_class(self) -> Type[Serializer]:
         if self.action == 'favorite':
             return FavoriteRecipeSerializer

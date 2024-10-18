@@ -156,7 +156,7 @@ class RecipeSerializer(serializers.ModelSerializer):
             return False
 
         if not hasattr(self, 'user_favorited'):
-            self.user_favorited = {recipe.pk for recipe
+            self.user_favorited = {favorite.recipe_id for favorite
                                    in request.user.favorite.all()}
 
         return obj.pk in self.user_favorited
@@ -167,7 +167,7 @@ class RecipeSerializer(serializers.ModelSerializer):
             return False
 
         if not hasattr(self, 'user_shopping_cart'):
-            self.user_shopping_cart = {recipe.pk for recipe
+            self.user_shopping_cart = {item.recipe_id for item
                                        in request.user.shopping_cart.all()}
 
         return obj.pk in self.user_shopping_cart
