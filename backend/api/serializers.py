@@ -13,7 +13,7 @@ from rest_framework.exceptions import APIException, ValidationError
 from rest_framework.request import Request
 
 import api.validators as api_validators
-import foodgram.models as fg_models
+from foodgram import models
 from users.models import MyUser
 
 User = get_user_model()
@@ -40,8 +40,8 @@ class UserSerializer(serializers.ModelSerializer):
             return False
 
         if not hasattr(self, 'user_follow'):
-            self.user_follow = {author.pk
-                                for author in request.user.follow.all()}
+            self.user_follow = {author.pk for author
+                                in request.user.follow.all()}
 
         return obj.pk in self.user_follow
 
@@ -56,13 +56,13 @@ class AvatarSerializer(serializers.ModelSerializer):
 
 class IngredientSerializer(serializers.ModelSerializer):
     class Meta:
-        model = fg_models.Ingredient
+        model = models.Ingredient
         fields = '__all__'
 
 
 class TagSerializer(serializers.ModelSerializer):
     class Meta:
-        model = fg_models.Tag
+        model = models.Tag
         fields = '__all__'
 
 
@@ -80,7 +80,7 @@ class RecipeIngredientSerializer(serializers.ModelSerializer):
     )
 
     class Meta:
-        model = fg_models.RecipeIngredient
+        model = models.RecipeIngredient
         fields = ('id', 'name', 'measurement_unit', 'amount')
 
 
@@ -124,7 +124,7 @@ class TagsIngredientsForRecipeSerialiser(serializers.Serializer):
 
     def validate(self, data: dict[str, Any]) -> dict[str, Any]:
         errors = {}
-        for model in (fg_models.Tag, fg_models.Ingredient):
+        for model in (models.Tag, models.Ingredient):
             self._validate_objects_exists(model, data, errors)
 
         if errors:
@@ -143,15 +143,34 @@ class RecipeSerializer(serializers.ModelSerializer):
         validators=(api_validators.empty_image_validator,)
     )
 
+    is_favorited = serializers.SerializerMethodField()
+    is_in_shopping_cart = serializers.SerializerMethodField()
+
     class Meta:
-        model = fg_models.Recipe
+        model = models.Recipe
         fields = '__all__'
 
-    # def is_favorited(self, obj: Recipe) -> bool:
-    #     pass
+    def get_is_favorited(self, obj: models.Recipe) -> bool:
+        request: Request = self.context['request']
+        if not request.auth:
+            return False
 
-    # def is_in_shopping_cart(self, obj: Recipe) -> bool:
-        # pass
+        if not hasattr(self, 'user_favorited'):
+            self.user_favorited = {recipe.pk for recipe
+                                   in request.user.favorite.all()}
+
+        return obj.pk in self.user_favorited
+
+    def get_is_in_shopping_cart(self, obj: models.Recipe) -> bool:
+        request: Request = self.context['request']
+        if not request.auth:
+            return False
+
+        if not hasattr(self, 'user_shopping_cart'):
+            self.user_shopping_cart = {recipe.pk for recipe
+                                       in request.user.shopping_cart.all()}
+
+        return obj.pk in self.user_shopping_cart
 
     def to_internal_value(self, data: dict[str, Any]) -> dict[str, Any]:
         errors = {}
@@ -169,23 +188,23 @@ class RecipeSerializer(serializers.ModelSerializer):
 
         return data
 
-    def create(self, validated_data: dict[str, Any]) -> fg_models.Recipe:
+    def create(self, validated_data: dict[str, Any]) -> models.Recipe:
         tags = validated_data.pop('tags')
         ingredients = validated_data.pop('ingredients')
 
         try:
             with transaction.atomic():
-                recipe = fg_models.Recipe.objects.create(
+                recipe = models.Recipe.objects.create(
                     author=self.context['request'].user, **validated_data
                 )
 
-                fg_models.RecipeTag.objects.bulk_create(
-                    (fg_models.RecipeTag(recipe=recipe, tag_id=id)
+                models.RecipeTag.objects.bulk_create(
+                    (models.RecipeTag(recipe=recipe, tag_id=id)
                      for id in tags)
                 )
 
-                fg_models.RecipeIngredient.objects.bulk_create(
-                    (fg_models.RecipeIngredient(
+                models.RecipeIngredient.objects.bulk_create(
+                    (models.RecipeIngredient(
                         recipe=recipe,
                         ingredient_id=item['id'],
                         amount=item['amount']
@@ -197,31 +216,31 @@ class RecipeSerializer(serializers.ModelSerializer):
 
         return recipe
 
-    def update(self, instance: fg_models.Recipe,
-               validated_data: dict[str, Any]) -> fg_models.Recipe:
+    def update(self, instance: models.Recipe,
+               validated_data: dict[str, Any]) -> models.Recipe:
         tags = validated_data.pop('tags')
         ingredients = validated_data.pop('ingredients')
 
         try:
             with transaction.atomic():
-                fg_models.Recipe.objects.filter(
+                models.Recipe.objects.filter(
                     pk=instance.pk
                 ).update(**validated_data)
 
-                fg_models.RecipeTag.objects.filter(
+                models.RecipeTag.objects.filter(
                     recipe_id=instance.pk
                 ).delete()
-                fg_models.RecipeIngredient.objects.filter(
+                models.RecipeIngredient.objects.filter(
                     recipe_id=instance.pk
                 ).delete()
 
-                fg_models.RecipeTag.objects.bulk_create(
-                    (fg_models.RecipeTag(recipe_id=instance.pk, tag_id=id)
+                models.RecipeTag.objects.bulk_create(
+                    (models.RecipeTag(recipe_id=instance.pk, tag_id=id)
                      for id in tags)
                 )
 
-                fg_models.RecipeIngredient.objects.bulk_create(
-                    (fg_models.RecipeIngredient(
+                models.RecipeIngredient.objects.bulk_create(
+                    (models.RecipeIngredient(
                         recipe_id=instance.pk,
                         ingredient_id=item['id'],
                         amount=item['amount']
@@ -231,7 +250,7 @@ class RecipeSerializer(serializers.ModelSerializer):
         except Exception:
             raise APIException()
 
-        return fg_models.Recipe.objects.get(pk=instance.pk)
+        return models.Recipe.objects.get(pk=instance.pk)
 
 
 class FavoriteAndShoppingCart(serializers.ModelSerializer):
@@ -239,7 +258,7 @@ class FavoriteAndShoppingCart(serializers.ModelSerializer):
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
 
     class Meta:
-        model = fg_models.Recipe
+        model = models.Recipe
         create_model = Model
         fields = ('id', 'name', 'image', 'cooking_time', 'recipe_id', 'user')
         extra_kwargs = {
@@ -255,9 +274,9 @@ class FavoriteAndShoppingCart(serializers.ModelSerializer):
 
 class FavoriteRecipeSerializer(FavoriteAndShoppingCart):
     class Meta(FavoriteAndShoppingCart.Meta):
-        create_model = fg_models.FavoriteRecipe
+        create_model = models.FavoriteRecipe
 
 
 class ShoppingCartRecipeSerializer(FavoriteAndShoppingCart):
     class Meta(FavoriteAndShoppingCart.Meta):
-        create_model = fg_models.ShoppingCartRecipe
+        create_model = models.ShoppingCartRecipe
