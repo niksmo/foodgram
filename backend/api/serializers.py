@@ -41,7 +41,7 @@ class UserSerializer(serializers.ModelSerializer):
 
         if not hasattr(self, 'user_follow'):
             self.user_follow = {author.pk for author
-                                in request.user.follow.all()}
+                                in request.user.subscriptions_set.all()}
 
         return obj.pk in self.user_follow
 
@@ -148,7 +148,7 @@ class RecipeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.Recipe
-        fields = '__all__'
+        exclude = ('created_at',)
 
     def get_is_favorited(self, obj: models.Recipe) -> bool:
         request: Request = self.context['request']

@@ -25,7 +25,9 @@ from api.serializers import (IngredientSerializer, RecipeSerializer,
                              TagSerializer, FavoriteRecipeSerializer,
                              ShoppingCartRecipeSerializer)
 
-import foodgram.models as fg_models
+from foodgram import models
+
+from . import const
 
 User = get_user_model()
 
@@ -50,6 +52,7 @@ class UserViewSet(DjoserUserViewSet):
         HttpMethod.HEAD,
         HttpMethod.OPTIONS
     ]
+    lookup_value_regex = const.LOOKUP_DIGIT_PATTERN
     queryset = User.objects.all()
 
     def get_serializer_class(self) -> Type[ModelSerializer]:
@@ -59,21 +62,21 @@ class UserViewSet(DjoserUserViewSet):
 
     @action([HttpMethod.GET],
             detail=False, permission_classes=[IsAuthenticated])
-    def me(self, request: Request, *args, **kwargs) -> Response:
+    def me(self, request: Request) -> Response:
         self.get_object = self.get_instance
-        return self.retrieve(request, *args, **kwargs)
+        return self.retrieve(request)
 
     @action([HttpMethod.PUT, HttpMethod.DELETE],
             url_path='me/avatar',
             detail=False,
             permission_classes=[IsAuthenticated])
-    def avatar(self, request: Request, *args, **kwargs) -> Response:
+    def avatar(self, request: Request) -> Response:
         if request.method and request.method.lower() == HttpMethod.DELETE:
             request.user.avatar = None
             request.user.save(update_fields=('avatar',))
             return Response(status=status.HTTP_204_NO_CONTENT)
         self.get_object = self.get_instance
-        return self.update(request, *args, **kwargs)
+        return self.update(request)
 
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
@@ -82,7 +85,7 @@ class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
         HttpMethod.HEAD,
         HttpMethod.OPTIONS
     ]
-    queryset = fg_models.Ingredient.objects.all()
+    queryset = models.Ingredient.objects.all()
     serializer_class = IngredientSerializer
     pagination_class = None
     filterset_class = IngredientListFilter
@@ -94,7 +97,7 @@ class TagViewSet(viewsets.ReadOnlyModelViewSet):
         HttpMethod.HEAD,
         HttpMethod.OPTIONS
     ]
-    queryset = fg_models.Tag.objects.all()
+    queryset = models.Tag.objects.all()
     serializer_class = TagSerializer
     pagination_class = None
 
@@ -108,7 +111,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
         HttpMethod.HEAD,
         HttpMethod.OPTIONS
     ]
-    queryset = fg_models.Recipe.objects.select_related(
+    lookup_url_kwarg = 'recipe_id'
+    lookup_value_regex = const.LOOKUP_DIGIT_PATTERN
+    queryset = models.Recipe.objects.select_related(
         'author'
     ).prefetch_related('tags')
     serializer_class = RecipeSerializer
@@ -130,16 +135,16 @@ class RecipeViewSet(viewsets.ModelViewSet):
     @action([HttpMethod.POST, HttpMethod.DELETE], detail=True,
             permission_classes=[IsAuthenticatedOrReadOnly,
                                 partial(IsOwnerAdminOrReadOnly, 'user')])
-    def favorite(self, request: Request, pk: str) -> Response:
-        return self.favorite_and_shopping_cart(request, pk,
-                                               fg_models.FavoriteRecipe)
+    def favorite(self, request: Request, recipe_id: str) -> Response:
+        return self.favorite_and_shopping_cart(request, recipe_id,
+                                               models.FavoriteRecipe)
 
     @action([HttpMethod.POST, HttpMethod.DELETE], detail=True,
             permission_classes=[IsAuthenticatedOrReadOnly,
                                 partial(IsOwnerAdminOrReadOnly, 'user')])
-    def shopping_cart(self, request: Request, pk: str) -> Response:
-        return self.favorite_and_shopping_cart(request, pk,
-                                               fg_models.ShoppingCartRecipe)
+    def shopping_cart(self, request: Request, recipe_id: str) -> Response:
+        return self.favorite_and_shopping_cart(request, recipe_id,
+                                               models.ShoppingCartRecipe)
 
     @action([HttpMethod.GET], detail=False,
             permission_classes=[IsAuthenticated])
@@ -150,11 +155,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def favorite_and_shopping_cart(
         self,
         request: Request,
-        pk: str,
+        recipe_id: str,
         intermediate_model: Type[Model]
     ) -> Response:
         if request.method and request.method.lower() == HttpMethod.DELETE:
-            recipe = get_object_or_404(fg_models.Recipe.objects, pk=pk)
+            recipe = get_object_or_404(models.Recipe.objects, pk=recipe_id)
             try:
                 obj = intermediate_model.objects.get(
                     user=request.user, recipe=recipe)
@@ -164,9 +169,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
             self.check_object_permissions(self.request, obj)
             return Response(status=status.HTTP_204_NO_CONTENT)
 
-        serializer = self.get_serializer(data={'recipe_id': pk})
+        serializer = self.get_serializer(data={'recipe_id': recipe_id})
         serializer.is_valid(raise_exception=True)
-        recipe = get_object_or_404(fg_models.Recipe, pk=pk)
+        recipe = get_object_or_404(models.Recipe, pk=recipe_id)
 
         if intermediate_model.objects.filter(
                 user=request.user,
@@ -179,3 +184,31 @@ class RecipeViewSet(viewsets.ModelViewSet):
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED,
                         headers=headers)
+
+
+class SubscriptionViewSet(viewsets.GenericViewSet):
+    lookup_url_kwarg = 'user_id'
+    lookup_value_regex = const.LOOKUP_DIGIT_PATTERN
+
+    @action(methods=[HttpMethod.GET], detail=False,
+            permission_classes=[IsAuthenticated], url_name='list')
+    def subscriptions(self, request, *args, **kwargs):
+        return Response({'info': 'IN DEV! Not implemented'},
+                        status=status.HTTP_501_NOT_IMPLEMENTED)
+
+    @action([HttpMethod.POST, HttpMethod.DELETE], detail=True,
+            permission_classes=[IsAuthenticated])
+    def subscribe(self, request, user_id, * args, **kwargs):
+        # if id == current user_id -> 400
+
+        # if user with id not exists -> 404
+
+        if request.method and request.method.lower() == HttpMethod.DELETE:
+            pass
+            # if not subscribed -> 400
+
+        # elif HttpMethod.POST
+        # if subscribed -> 400
+
+        return Response({'info': 'IN DEV! Not implemented'},
+                        status=status.HTTP_501_NOT_IMPLEMENTED)

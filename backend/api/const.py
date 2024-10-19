@@ -1,0 +1,1 @@
+LOOKUP_DIGIT_PATTERN = r'\d+'
