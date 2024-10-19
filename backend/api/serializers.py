@@ -1,8 +1,7 @@
-from typing import Any, Type
+from typing import Any, Type, Union
 
 from django.db import transaction
 from django.db.models import Model
-from django.contrib.auth import get_user_model
 
 import djoser.serializers as djoser_serializers
 
@@ -14,9 +13,7 @@ from rest_framework.request import Request
 
 import api.validators as api_validators
 from foodgram import models
-from users.models import MyUser
-
-User = get_user_model()
+from users.models import MyUser as User
 
 
 class UserCreateSerializer(djoser_serializers.UserCreateSerializer):
@@ -29,28 +26,30 @@ class UserSerializer(serializers.ModelSerializer):
     is_subscribed = serializers.SerializerMethodField()
 
     class Meta:
-        model = User
+        model = models.User
         fields = ('id', 'username', 'first_name', 'last_name',
                   'email', 'is_subscribed', 'avatar')
         read_only_fields = ('id', 'is_subscribed', 'avatar')
 
-    def get_is_subscribed(self, obj: MyUser) -> bool:
+    def get_is_subscribed(self, author: User) -> bool:
         request: Request = self.context['request']
         if not request.auth:
             return False
 
-        if not hasattr(self, 'user_follow'):
-            self.user_follow = {author.pk for author
-                                in request.user.subscriptions_set.all()}
+        if not hasattr(self, '_subs_authors_id'):
+            self._subs_authors_id = {
+                author.pk for author
+                in request.user.subscriptions_set.all()
+            }
 
-        return obj.pk in self.user_follow
+        return author.pk in self._subs_authors_id
 
 
 class AvatarSerializer(serializers.ModelSerializer):
     avatar = Base64ImageField()
 
     class Meta:
-        model = User
+        model = models.User
         fields = ('avatar',)
 
 
@@ -253,30 +252,42 @@ class RecipeSerializer(serializers.ModelSerializer):
         return models.Recipe.objects.get(pk=instance.pk)
 
 
-class FavoriteAndShoppingCart(serializers.ModelSerializer):
-    recipe_id = serializers.IntegerField(write_only=True, min_value=1)
-    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
-
+class FavoriteShoppingCartSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Recipe
-        create_model = Model
-        fields = ('id', 'name', 'image', 'cooking_time', 'recipe_id', 'user')
-        extra_kwargs = {
-            'id': {'read_only': True},
-            'name': {'read_only': True},
-            'image': {'read_only': True},
-            'cooking_time': {'read_only': True}
-        }
-
-    def create(self, validated_data: dict[str, Any]):
-        return self.Meta.create_model.objects.create(**validated_data).recipe
+        fields = ('id', 'name', 'image', 'cooking_time')
 
 
-class FavoriteRecipeSerializer(FavoriteAndShoppingCart):
-    class Meta(FavoriteAndShoppingCart.Meta):
-        create_model = models.FavoriteRecipe
+class SubscriptionSerializer(serializers.ModelSerializer):
+    recipes_count = serializers.SerializerMethodField()
+    recipes = serializers.SerializerMethodField()
+    is_subscribed = serializers.ReadOnlyField(default=True)
 
+    class Meta:
+        model = models.User
+        fields = ('id', 'username', 'first_name', 'last_name', 'email',
+                  'is_subscribed', 'recipes', 'recipes_count', 'avatar')
 
-class ShoppingCartRecipeSerializer(FavoriteAndShoppingCart):
-    class Meta(FavoriteAndShoppingCart.Meta):
-        create_model = models.ShoppingCartRecipe
+    def produce_recipe_limit(self) -> Union[int, None]:
+        request = self.context['request']
+        if 'recipes_limit' not in request.query_params:
+            return None
+        else:
+            limit_str: str = request.query_params['recipes_limit']
+            assert limit_str.isdigit(), 'Expected limit is converting to `int`'
+            limit = int(limit_str)
+            assert limit > 0, 'Expected limit more then `0`'
+            return limit
+
+    def get_recipes(self, obj: User):
+        recipes = obj.recipes.values('id', 'name', 'image', 'cooking_time')
+        self.context['recipes_count'] = len(recipes)
+        return recipes[0:self.produce_recipe_limit()]
+
+    def get_recipes_count(self, obj: User):
+        return self.context['recipes_count']
+
+    def to_internal_value(self, data):
+        raise NotImplementedError(
+            'Unnecessary method which may cause unexpected behavior'
+        )
