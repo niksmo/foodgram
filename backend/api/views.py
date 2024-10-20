@@ -1,5 +1,6 @@
 from functools import partial
 from typing import Type
+from secrets import token_urlsafe
 
 from django.contrib.auth import get_user_model
 from django.db.models import Model
@@ -7,11 +8,11 @@ from django.shortcuts import get_object_or_404
 
 from djoser.views import UserViewSet as DjoserUserViewSet
 
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import (IsAuthenticated,
                                         IsAuthenticatedOrReadOnly)
-from rest_framework import status, viewsets
-from rest_framework.exceptions import ValidationError
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.serializers import ModelSerializer
@@ -24,7 +25,8 @@ from api.serializers import (AvatarSerializer, FavoriteShoppingCartSerializer,
 
 from foodgram import models
 
-from .const import LOOKUP_DIGIT_PATTERN, HttpMethod
+from .const import (HttpMethod, LOOKUP_DIGIT_PATTERN,
+                    SHORT_LINK_TOKEN_NBYTES, SHORT_LINK_URL_PATH)
 
 User = get_user_model()
 
@@ -144,9 +146,46 @@ class RecipeViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticatedOrReadOnly,
                           partial(IsOwnerAdminOrReadOnly, 'author')]
 
+    def get_recipe(self, recipe_id: str):
+        return get_object_or_404(models.Recipe.objects, pk=recipe_id)
+
+    def make_token(self, nbytes: int) -> str:
+        while True:
+            token = token_urlsafe(nbytes)
+            if not models.RecipeShortLink.objects.filter(token=token).exists():
+                break
+        return token
+
+    @action([HttpMethod.GET], detail=True, url_path='get-link')
+    def get_link(self, request: Request, recipe_id: str) -> Response:
+        recipe = self.get_recipe(recipe_id)
+        try:
+            token = recipe.link_token.token
+        except models.RecipeShortLink.DoesNotExist:
+            token = self.make_token(SHORT_LINK_TOKEN_NBYTES)
+            models.RecipeShortLink.objects.create(recipe=recipe, token=token)
+
+        return Response(
+            {'short-link': request.build_absolute_uri(
+                f'/{SHORT_LINK_URL_PATH}{token}'
+            )}
+        )
+
+    @action([HttpMethod.POST, HttpMethod.DELETE], detail=True,
+            permission_classes=[IsAuthenticatedOrReadOnly])
+    def favorite(self, request: Request, recipe_id: str) -> Response:
+        return self.add_to_fav_or_shop_cart(request, recipe_id,
+                                            models.FavoriteRecipe)
+
+    @action([HttpMethod.POST, HttpMethod.DELETE], detail=True,
+            permission_classes=[IsAuthenticatedOrReadOnly])
+    def shopping_cart(self, request: Request, recipe_id: str) -> Response:
+        return self.add_to_fav_or_shop_cart(request, recipe_id,
+                                            models.ShoppingCartRecipe)
+
     def add_to_fav_or_shop_cart(self, request: Request, recipe_id: str,
                                 inter_model: Type[Model]) -> Response:
-        recipe = get_object_or_404(models.Recipe.objects, pk=recipe_id)
+        recipe = self.get_recipe(recipe_id)
         stored_obj_qs = inter_model.objects.filter(user=request.user,
                                                    recipe=recipe)
 
@@ -164,24 +203,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return Response(FavoriteShoppingCartSerializer(recipe).data,
                         status=status.HTTP_201_CREATED)
 
-    @action([HttpMethod.POST, HttpMethod.DELETE], detail=True,
-            permission_classes=[IsAuthenticatedOrReadOnly])
-    def favorite(self, request: Request, recipe_id: str) -> Response:
-        return self.add_to_fav_or_shop_cart(request, recipe_id,
-                                            models.FavoriteRecipe)
-
-    @action([HttpMethod.POST, HttpMethod.DELETE], detail=True,
-            permission_classes=[IsAuthenticatedOrReadOnly])
-    def shopping_cart(self, request: Request, recipe_id: str) -> Response:
-        return self.add_to_fav_or_shop_cart(request, recipe_id,
-                                            models.ShoppingCartRecipe)
-
     @action([HttpMethod.GET], detail=False,
             permission_classes=[IsAuthenticated])
     def download_shopping_cart(self, request: Request) -> Response:
         return Response(data={'info': 'IN DEV! Not implemented'},
                         status=status.HTTP_501_NOT_IMPLEMENTED)
-
-    # @action(['get'], detail=True)
-    # def get_link(self):
-    #     pass

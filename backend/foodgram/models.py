@@ -220,3 +220,15 @@ class Subscription(AbstractCreatedAt):
                 check=~models.Q(user__exact=models.F('author')),
                 name='user_cant_follow_on_self')
         ]
+
+
+class RecipeShortLink(models.Model):
+    recipe = models.OneToOneField(
+        Recipe, on_delete=models.CASCADE,
+        related_name='link_token'
+    )
+
+    token = models.SlugField(
+        max_length=const.MAX_SHORT_LINK_TOKEN_LENGTH,
+        unique=True
+    )
