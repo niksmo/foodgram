@@ -3,7 +3,9 @@ from typing import Type
 from secrets import token_urlsafe
 
 from django.contrib.auth import get_user_model
-from django.db.models import Model
+from django.db.models import Model, Sum
+from django.db.models.functions import Lower
+from django.http.response import HttpResponse
 from django.shortcuts import get_object_or_404
 
 from djoser.views import UserViewSet as DjoserUserViewSet
@@ -21,7 +23,7 @@ from api.filters import IngredientListFilter, RecipeListFilter
 from api.permissions import IsOwnerAdminOrReadOnly
 from api.serializers import (AvatarSerializer, FavoriteShoppingCartSerializer,
                              IngredientSerializer, RecipeSerializer,
-                             SubscriptionSerializer, TagSerializer,)
+                             SubscriptionSerializer, TagSerializer)
 
 from foodgram import models
 
@@ -205,6 +207,27 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     @action([HttpMethod.GET], detail=False,
             permission_classes=[IsAuthenticated])
-    def download_shopping_cart(self, request: Request) -> Response:
-        return Response(data={'info': 'IN DEV! Not implemented'},
-                        status=status.HTTP_501_NOT_IMPLEMENTED)
+    def download_shopping_cart(self, request: Request) -> HttpResponse:
+        recipes_id = tuple(
+            item['recipe_id'] for item
+            in request.user.shopping_cart.all().values('recipe_id')
+        )
+        if not recipes_id:
+            ValidationError({self.action: 'Корзина пуста.'})
+
+        ingredients = models.RecipeIngredient.objects.filter(
+            recipe_id__in=recipes_id
+        ).select_related('ingredient').values(
+            name=Lower('ingredient__name'),
+            unit=Lower('ingredient__measurement_unit')
+        ).annotate(amount=Sum('amount'))
+
+        shopping_list = (f'{item["name"]} — {item["amount"]} {item["unit"]}'
+                         for item
+                         in ingredients)
+        to_response = '\n'.join(shopping_list).encode('utf-8')
+        http_response = HttpResponse(to_response, 'text/plain;charset=UTF-8')
+        http_response['Content-Length'] = len(to_response)
+        http_response['Content-Disposition'] = ('attachment; '
+                                                'filename="shopping-cart.txt"')
+        return http_response
