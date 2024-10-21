@@ -32,7 +32,8 @@ class Ingredient(models.Model):
     )
 
     class Meta:
-        verbose_name = 'ингродиент'
+        ordering = ['name']
+        verbose_name = 'ингредиент'
         verbose_name_plural = 'Ингродиенты'
 
     def __str__(self) -> str:
@@ -54,6 +55,7 @@ class Tag(models.Model):
     )
 
     class Meta:
+        ordering = ['name']
         verbose_name = 'тэг'
         verbose_name_plural = 'Тэги'
 
@@ -84,7 +86,8 @@ class Recipe(AbstractCreatedAt):
     author = models.ForeignKey(
         User,
         related_name='recipes',
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
+        verbose_name='Автор'
     )
 
     ingredients = models.ManyToManyField(
@@ -114,7 +117,8 @@ class RecipeIngredient(models.Model):
     ingredient = models.ForeignKey(
         Ingredient,
         on_delete=models.CASCADE,
-        related_name='recipes'
+        related_name='recipes',
+        verbose_name='ингредиенты'
     )
 
     recipe = models.ForeignKey(
@@ -129,6 +133,8 @@ class RecipeIngredient(models.Model):
     )
 
     class Meta:
+        verbose_name = 'ингредиент рецепта'
+        verbose_name_plural = 'Ингродиенты рецепта'
         constraints = [
             models.UniqueConstraint(fields=('ingredient', 'recipe'),
                                     name='unique_ingredient'),
@@ -141,7 +147,8 @@ class RecipeTag(models.Model):
     tag = models.ForeignKey(
         Tag,
         on_delete=models.CASCADE,
-        related_name='recipes'
+        related_name='recipes',
+        verbose_name='тэг'
     )
 
     recipe = models.ForeignKey(
@@ -151,6 +158,8 @@ class RecipeTag(models.Model):
     )
 
     class Meta:
+        verbose_name = 'тэг рецепта'
+        verbose_name_plural = 'Тэги рецепта'
         constraints = [
             models.UniqueConstraint(fields=('tag', 'recipe'),
                                     name='unique_tag'),

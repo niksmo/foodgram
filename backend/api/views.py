@@ -4,7 +4,7 @@ from secrets import token_urlsafe
 from django.contrib.auth import get_user_model
 from django.db.models import Model, Sum
 from django.db.models.functions import Lower
-from django.http.response import HttpResponse
+from django.http.response import HttpResponseBase, FileResponse
 from django.shortcuts import get_object_or_404
 
 from djoser.views import UserViewSet as DjoserUserViewSet
@@ -213,7 +213,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     @action([HttpMethod.GET], detail=False,
             permission_classes=[IsAuthenticated])
-    def download_shopping_cart(self, request: Request) -> HttpResponse:
+    def download_shopping_cart(self, request: Request) -> HttpResponseBase:
         recipes_id = tuple(
             item['recipe_id'] for item
             in request.user.shopping_cart.all().values('recipe_id')
@@ -228,12 +228,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
             unit=Lower('ingredient__measurement_unit')
         ).annotate(amount=Sum('amount'))
 
-        shopping_list = (f'{item["name"]} — {item["amount"]} {item["unit"]}'
-                         for item
-                         in ingredients)
-        to_response = '\n'.join(shopping_list).encode('utf-8')
-        http_response = HttpResponse(to_response, 'text/plain;charset=UTF-8')
-        http_response['Content-Length'] = len(to_response)
-        http_response['Content-Disposition'] = ('attachment; '
-                                                'filename="shopping-cart.txt"')
-        return http_response
+        to_response = '\n'.join(((f'{item["name"]} — '
+                                  f'{item["amount"]} {item["unit"]}')
+                                 for item in ingredients))
+        return FileResponse(to_response, as_attachment=True,
+                            filename='shopping-cart.txt')

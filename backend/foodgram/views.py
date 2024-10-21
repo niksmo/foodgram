@@ -9,7 +9,6 @@ from .const import FRONTEND_RECIPES_PATH
 
 class RecipeShortLinkView(View):
     def get(self, request: HttpRequest, token: str) -> HttpResponse:
-        breakpoint()
         short_link = get_object_or_404(
             RecipeShortLink.objects.select_related('recipe'),
             token=token
