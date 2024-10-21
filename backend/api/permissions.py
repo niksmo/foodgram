@@ -1,5 +1,8 @@
+from django.db.models import Model
+
 from rest_framework.exceptions import NotFound
 from rest_framework.permissions import BasePermission, SAFE_METHODS
+from rest_framework.request import Request
 
 
 class NotAllowAny(BasePermission):
@@ -7,11 +10,9 @@ class NotAllowAny(BasePermission):
         raise NotFound
 
 
-class IsOwnerAdminOrReadOnly(BasePermission):
-    def __init__(self, owner_attr='stub') -> None:
-        self.owner_attr = owner_attr
-
-    def has_object_permission(self, request, view, obj) -> bool:
+class IsAuthorAdminOrReadOnly(BasePermission):
+    def has_object_permission(self, request: Request,
+                              view, obj: Model) -> bool:
         return (request.method in SAFE_METHODS
-                or getattr(obj, self.owner_attr, False) == request.user
+                or obj.author == request.user
                 or request.user.is_admin)

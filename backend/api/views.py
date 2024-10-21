@@ -1,4 +1,3 @@
-from functools import partial
 from typing import Type
 from secrets import token_urlsafe
 
@@ -20,7 +19,7 @@ from rest_framework.response import Response
 from rest_framework.serializers import ModelSerializer
 
 from api.filters import IngredientListFilter, RecipeListFilter
-from api.permissions import IsOwnerAdminOrReadOnly
+from api.permissions import IsAuthorAdminOrReadOnly
 from api.serializers import (AvatarSerializer, FavoriteShoppingCartSerializer,
                              IngredientSerializer, RecipeSerializer,
                              SubscriptionSerializer, TagSerializer)
@@ -146,12 +145,19 @@ class RecipeViewSet(viewsets.ModelViewSet):
     serializer_class = RecipeSerializer
     filterset_class = RecipeListFilter
     permission_classes = [IsAuthenticatedOrReadOnly,
-                          partial(IsOwnerAdminOrReadOnly, 'author')]
+                          IsAuthorAdminOrReadOnly]
 
-    def get_recipe(self, recipe_id: str):
+    def perform_create(self, serializer: ModelSerializer) -> None:
+        serializer.save(author=self.request.user)
+
+    def update(self, request, *args, **kwargs):
+        kwargs.pop('partial')
+        return super().update(request, *args, **kwargs)
+
+    def _get_recipe(self, recipe_id: str):
         return get_object_or_404(models.Recipe.objects, pk=recipe_id)
 
-    def make_token(self, nbytes: int) -> str:
+    def _make_token(self, nbytes: int) -> str:
         while True:
             token = token_urlsafe(nbytes)
             if not models.RecipeShortLink.objects.filter(token=token).exists():
@@ -160,11 +166,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     @action([HttpMethod.GET], detail=True, url_path='get-link')
     def get_link(self, request: Request, recipe_id: str) -> Response:
-        recipe = self.get_recipe(recipe_id)
+        recipe = self._get_recipe(recipe_id)
         try:
             token = recipe.link_token.token
         except models.RecipeShortLink.DoesNotExist:
-            token = self.make_token(SHORT_LINK_TOKEN_NBYTES)
+            token = self._make_token(SHORT_LINK_TOKEN_NBYTES)
             models.RecipeShortLink.objects.create(recipe=recipe, token=token)
 
         return Response(
@@ -187,7 +193,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     def add_to_fav_or_shop_cart(self, request: Request, recipe_id: str,
                                 inter_model: Type[Model]) -> Response:
-        recipe = self.get_recipe(recipe_id)
+        recipe = self._get_recipe(recipe_id)
         stored_obj_qs = inter_model.objects.filter(user=request.user,
                                                    recipe=recipe)
 
