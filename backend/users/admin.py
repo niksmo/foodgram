@@ -10,7 +10,8 @@ class UserAdmin(admin.UserAdmin):
         'last_name',
         'email',
         'avatar',
-        'is_staff'
+        'last_login',
+        'date_joined'
     )
 
     fieldsets = (

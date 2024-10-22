@@ -3,7 +3,15 @@ from django.db.models.query import QuerySet
 from django.http import HttpRequest
 from django.db.models import Count
 
-from .models import Ingredient, Recipe, RecipeIngredient, RecipeTag, Tag
+from .models import (Ingredient, FavoriteRecipe, ShoppingCartRecipe,
+                     Recipe, RecipeIngredient, RecipeShortLink, RecipeTag,
+                     Subscription, Tag)
+
+
+@admin.register(Subscription)
+class SubscriptionAdmin(admin.ModelAdmin):
+    list_display = ('user', 'author', 'created_at')
+    list_display_links = ('user',)
 
 
 @admin.register(Ingredient)
@@ -50,3 +58,21 @@ class RecipeAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request: HttpRequest) -> QuerySet:
         return super().get_queryset(request).annotate(Count('in_favorites'))
+
+
+@admin.register(FavoriteRecipe)
+class FavoriteRecipeAdmin(admin.ModelAdmin):
+    list_display = ('recipe', 'user', 'created_at')
+    list_display_links = ('recipe',)
+
+
+@admin.register(ShoppingCartRecipe)
+class ShoppingCartRecipeAdmin(admin.ModelAdmin):
+    list_display = ('recipe', 'user', 'created_at')
+    list_display_links = ('recipe',)
+
+
+@admin.register(RecipeShortLink)
+class RecipeShortLinkAdmin(admin.ModelAdmin):
+    list_display = ('recipe', 'token', 'created_at')
+    list_display_links = ('recipe',)

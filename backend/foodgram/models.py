@@ -10,7 +10,7 @@ User = get_user_model()
 
 class AbstractCreatedAt(models.Model):
     created_at = models.DateTimeField(
-        'Создано', auto_now_add=True
+        'создано', auto_now_add=True
     )
 
     class Meta:
@@ -19,20 +19,20 @@ class AbstractCreatedAt(models.Model):
 
 class Ingredient(models.Model):
     name = models.CharField(
-        'Название',
+        'название',
         max_length=const.MAX_INGREDIENT_NAME_LENGTH,
         unique=True,
         blank=False
     )
 
     measurement_unit = models.CharField(
-        'Единица измерения',
+        'единица измерения',
         max_length=const.MAX_MEASUREMENT_UNIT_LENGTH,
         blank=False
     )
 
     class Meta:
-        ordering = ['name']
+        ordering = ('name',)
         verbose_name = 'ингредиент'
         verbose_name_plural = 'Ингродиенты'
 
@@ -42,7 +42,7 @@ class Ingredient(models.Model):
 
 class Tag(models.Model):
     name = models.CharField(
-        'Название',
+        'название',
         max_length=const.MAX_TAG_NAME_LENGTH,
         unique=True,
         blank=False
@@ -55,9 +55,9 @@ class Tag(models.Model):
     )
 
     class Meta:
-        ordering = ['name']
-        verbose_name = 'тэг'
-        verbose_name_plural = 'Тэги'
+        ordering = ('name',)
+        verbose_name = 'тег'
+        verbose_name_plural = 'Теги'
 
     def __str__(self) -> str:
         return utils.get_model_admin_name(self.name)
@@ -65,20 +65,20 @@ class Tag(models.Model):
 
 class Recipe(AbstractCreatedAt):
     name = models.CharField(
-        'Название',
+        'название',
         max_length=const.MAX_RECIPE_NAME_LENGTH
     )
 
-    text = models.TextField('Описание')
+    text = models.TextField('описание')
 
     image = models.ImageField(
-        'Картинка',
+        'картинка',
         upload_to='recipes/',
         blank=False
     )
 
     cooking_time = models.SmallIntegerField(
-        'Время приготовления',
+        'время приготовления',
         help_text='минут',
         validators=[MinValueValidator(limit_value=1)]
     )
@@ -103,7 +103,7 @@ class Recipe(AbstractCreatedAt):
     class Meta:
         verbose_name = 'рецепт'
         verbose_name_plural = 'Рецепты'
-        ordering = ['-created_at']
+        ordering = ('-created_at',)
         constraints = [
             models.CheckConstraint(name='positive_cooking_time',
                                    check=models.Q(cooking_time__gt=0))
@@ -128,7 +128,7 @@ class RecipeIngredient(models.Model):
     )
 
     amount = models.SmallIntegerField(
-        'Количество',
+        'количество',
         validators=[MinValueValidator(limit_value=1)]
     )
 
@@ -148,7 +148,7 @@ class RecipeTag(models.Model):
         Tag,
         on_delete=models.CASCADE,
         related_name='recipes',
-        verbose_name='тэг'
+        verbose_name='тег'
     )
 
     recipe = models.ForeignKey(
@@ -158,35 +158,42 @@ class RecipeTag(models.Model):
     )
 
     class Meta:
-        verbose_name = 'тэг рецепта'
-        verbose_name_plural = 'Тэги рецепта'
+        verbose_name = 'тег рецепта'
+        verbose_name_plural = 'Теги рецепта'
         constraints = [
             models.UniqueConstraint(fields=('tag', 'recipe'),
                                     name='unique_tag'),
         ]
 
 
-class FavoriteRecipe(models.Model):
+class FavoriteRecipe(AbstractCreatedAt):
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='favorite'
+        related_name='favorite',
+        verbose_name='пользователь'
     )
 
     recipe = models.ForeignKey(
         Recipe,
         on_delete=models.CASCADE,
-        related_name='in_favorites'
+        related_name='in_favorites',
+        verbose_name='рецепт'
     )
 
     class Meta:
+        verbose_name = 'избранное'
+        verbose_name_plural = 'Избранные рецепты'
         constraints = [
             models.UniqueConstraint(fields=('user', 'recipe'),
                                     name='unique_favorite'),
         ]
 
+    def __str__(self) -> str:
+        return f'Запись в избранном <id: {self.pk}>'
 
-class ShoppingCartRecipe(models.Model):
+
+class ShoppingCartRecipe(AbstractCreatedAt):
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -200,26 +207,35 @@ class ShoppingCartRecipe(models.Model):
     )
 
     class Meta:
+        verbose_name = 'корзина покупок'
+        verbose_name_plural = 'Корзины покупок'
         constraints = [
             models.UniqueConstraint(fields=('user', 'recipe'),
                                     name=('shopping_cart_'
                                           'include_unique_recipes')),
         ]
 
+    def __str__(self) -> str:
+        return f'Запись в корзине покупок <id: {self.pk}>'
+
 
 class Subscription(AbstractCreatedAt):
     user = models.ForeignKey(
         User, on_delete=models.CASCADE,
-        related_name='subscriptions_set'
+        related_name='subscriptions_set',
+        verbose_name='пользователь'
     )
 
     author = models.ForeignKey(
         User, on_delete=models.CASCADE,
-        related_name='subscribers_set'
+        related_name='subscribers_set',
+        verbose_name='автор'
     )
 
     class Meta:
-        ordering = ['-created_at']
+        ordering = ('-created_at',)
+        verbose_name = 'подписка'
+        verbose_name_plural = 'Подписки'
         constraints = [
             models.UniqueConstraint(
                 fields=('user', 'author'),
@@ -230,8 +246,11 @@ class Subscription(AbstractCreatedAt):
                 name='user_cant_follow_on_self')
         ]
 
+    def __str__(self) -> str:
+        return f'Запись в подписках <id: {self.pk}>'
 
-class RecipeShortLink(models.Model):
+
+class RecipeShortLink(AbstractCreatedAt):
     recipe = models.OneToOneField(
         Recipe, on_delete=models.CASCADE,
         related_name='link_token'
@@ -241,3 +260,10 @@ class RecipeShortLink(models.Model):
         max_length=const.MAX_SHORT_LINK_TOKEN_LENGTH,
         unique=True
     )
+
+    class Meta:
+        verbose_name = 'короткая ссылка'
+        verbose_name_plural = 'Короткие ссылки'
+
+    def __str__(self) -> str:
+        return f'Запись в коротких ссылках <id: {self.pk}>'
