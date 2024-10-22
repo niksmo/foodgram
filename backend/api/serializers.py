@@ -11,9 +11,9 @@ from rest_framework import serializers
 from rest_framework.exceptions import APIException, ValidationError
 from rest_framework.request import Request
 
-from api.validators import empty_image_validator, repetitions_id_validator
 from foodgram import models
 from users.models import MyUser as User
+from .validators import empty_image_validator, repetitions_id_validator
 
 
 class UserCreateSerializer(djoser_serializers.UserCreateSerializer):
@@ -175,19 +175,13 @@ class RecipeSerializer(serializers.ModelSerializer):
         exclude = ('created_at',)
         read_only_fields = ('author',)
 
-    def _set_tags_ingredients(self, recipe, tags, ingredients) -> None:
-        models.RecipeTag.objects.bulk_create(
-            (models.RecipeTag(recipe=recipe, tag_id=id) for id in tags)
-        )
-
-        models.RecipeIngredient.objects.bulk_create(
-            (models.RecipeIngredient(
-                recipe=recipe,
-                ingredient_id=item['id'],
-                amount=item['amount']
-            )
-                for item in ingredients)
-        )
+    def validate(self, data: dict[str, Any]) -> dict[str, Any]:
+        errors = {}
+        for model in (models.Tag, models.Ingredient):
+            self._validate_objects_exists(model, data, errors)
+        if errors:
+            raise ValidationError(errors)
+        return data
 
     def _validate_objects_exists(self, model: Type[Model],
                                  data: dict[str, Any],
@@ -208,14 +202,6 @@ class RecipeSerializer(serializers.ModelSerializer):
             errors[field] = (f'{model.__name__} c "id" '
                              f'{sorted(not_exists)} '
                              'не существует.')
-
-    def validate(self, data: dict[str, Any]) -> dict[str, Any]:
-        errors = {}
-        for model in (models.Tag, models.Ingredient):
-            self._validate_objects_exists(model, data, errors)
-        if errors:
-            raise ValidationError(errors)
-        return data
 
     def to_representation(self, recipe: models.Recipe):
         return RecipeReadSerializer(recipe, context=self.context).data
@@ -254,6 +240,20 @@ class RecipeSerializer(serializers.ModelSerializer):
 
         return recipe
 
+    def _set_tags_ingredients(self, recipe, tags, ingredients) -> None:
+        models.RecipeTag.objects.bulk_create(
+            (models.RecipeTag(recipe=recipe, tag_id=id) for id in tags)
+        )
+
+        models.RecipeIngredient.objects.bulk_create(
+            (models.RecipeIngredient(
+                recipe=recipe,
+                ingredient_id=item['id'],
+                amount=item['amount']
+            )
+                for item in ingredients)
+        )
+
 
 class FavoriteShoppingCartSerializer(serializers.ModelSerializer):
     class Meta:
@@ -262,8 +262,8 @@ class FavoriteShoppingCartSerializer(serializers.ModelSerializer):
 
 
 class SubscriptionSerializer(serializers.ModelSerializer):
-    recipes_count = serializers.SerializerMethodField()
     recipes = serializers.SerializerMethodField()
+    recipes_count = serializers.SerializerMethodField()
     is_subscribed = serializers.ReadOnlyField(default=True)
 
     class Meta:
@@ -287,7 +287,11 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         self.context['recipes_count'] = len(recipes)
         return recipes[0:self.produce_recipe_limit()]
 
-    def get_recipes_count(self, author: User):
+    def get_recipes_count(self, _: User):
+        assert 'recipes_count' in self.context, (
+            '`recipes_count` '
+            'should being after `recipes` in `self.Meta.fields`'
+        )
         return self.context['recipes_count']
 
     def to_internal_value(self, data):
