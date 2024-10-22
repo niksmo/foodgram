@@ -1,12 +1,13 @@
+from os import getenv
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-8m$xj2v9g+!_&cr0_$r9%gywzkm@drwkssqu^_b!24670%4kr='
+SECRET_KEY = getenv('SECRET_KEY', 'django_sercret_key')
 
-DEBUG = True
+DEBUG = getenv('DEBUG', 'False').title() == 'True'
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = getenv('ALLOWED_HOSTS', '').split()
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -58,16 +59,18 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = "users.MyUser"
 
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'foodgram',
-        'USER': 'postgres',
-        'PASSWORD': 'postgres',
-        'HOST': '127.0.0.1',
-        'PORT': 5432,
+        'NAME': getenv('POSTGRES_DB', 'django'),
+        'USER': getenv('POSTGRES_USER', 'django'),
+        'PASSWORD': getenv('POSTGRES_PASSWORD', ''),
+        'HOST': getenv('DB_HOST', ''),
+        'PORT': getenv('DB_PORT', 5432)
     }
 }
+
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -93,14 +96,11 @@ MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework.authentication.TokenAuthentication',
-    ),
+    'DEFAULT_AUTHENTICATION_CLASSES': ('rest_framework.authentication.TokenAuthentication',),
+    'DEFAULT_PERMISSION_CLASSES': ('rest_framework.permissions.AllowAny',),
+    'DEFAULT_FILTER_BACKENDS': ('django_filters.rest_framework.DjangoFilterBackend',),
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
-    'DEFAULT_FILTER_BACKENDS': (
-        'django_filters.rest_framework.DjangoFilterBackend',
-    ),
-    'PAGE_SIZE': 10
+    'PAGE_SIZE': 10,
 }
 
 DJOSER = {

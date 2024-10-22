@@ -1,0 +1,9 @@
+.dockerignore
+Dockerfile
+.git
+.gitignore
+__pycache__/
+venv
+.env
+README.md
+media/
