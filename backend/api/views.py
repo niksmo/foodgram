@@ -232,4 +232,5 @@ class RecipeViewSet(viewsets.ModelViewSet):
                                   f'{item["amount"]} {item["unit"]}')
                                  for item in ingredients))
         return FileResponse(to_response, as_attachment=True,
-                            filename='shopping-cart.txt')
+                            filename='shopping-cart.txt',
+                            content_type='text/plain')

@@ -5,7 +5,7 @@ from django.utils.translation import gettext_lazy
 
 class MyUser(AbstractUser):
     email = models.EmailField(gettext_lazy('email address'), unique=True)
-    avatar = models.ImageField('Аватар', upload_to='avatars/', blank=True)
+    avatar = models.ImageField('Аватар', upload_to='avatars', blank=True)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username', 'first_name', 'last_name']

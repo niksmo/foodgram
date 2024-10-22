@@ -73,7 +73,7 @@ class Recipe(AbstractCreatedAt):
 
     image = models.ImageField(
         'картинка',
-        upload_to='recipes/',
+        upload_to='recipes',
         blank=False
     )
 

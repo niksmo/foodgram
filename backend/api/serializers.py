@@ -226,15 +226,10 @@ class RecipeSerializer(serializers.ModelSerializer):
 
         try:
             with transaction.atomic():
-                models.Recipe.objects.filter(
-                    pk=recipe.pk
-                ).update(**validated_data)
-
-                recipe.refresh_from_db()
-                models.RecipeTag.objects.filter(recipe=recipe).delete()
-                models.RecipeIngredient.objects.filter(recipe=recipe).delete()
+                super().update(recipe, validated_data)
+                for model in (models.RecipeTag, models.RecipeIngredient):
+                    model.objects.filter(recipe=recipe).delete()
                 self._set_tags_ingredients(recipe, tags, ingredients)
-
         except Exception:
             raise APIException()
 
@@ -261,6 +256,12 @@ class FavoriteShoppingCartSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'image', 'cooking_time')
 
 
+class SubscriptionReadRecipeSerialiser(serializers.ModelSerializer):
+    class Meta:
+        model = models.Recipe
+        fields = ('id', 'name', 'image', 'cooking_time')
+
+
 class SubscriptionSerializer(serializers.ModelSerializer):
     recipes = serializers.SerializerMethodField()
     recipes_count = serializers.SerializerMethodField()
@@ -275,17 +276,21 @@ class SubscriptionSerializer(serializers.ModelSerializer):
         request: Request = self.context['request']
         if 'recipes_limit' not in request.query_params:
             return None
-        else:
-            limit_str: str = request.query_params['recipes_limit']
-            assert limit_str.isdigit(), 'Expected limit is converting to `int`'
-            limit = int(limit_str)
-            assert limit > 0, 'Expected limit more then `0`'
-            return limit
+
+        limit_str: str = request.query_params['recipes_limit']
+        assert limit_str.isdigit(), 'Expected limit is converting to `int`'
+        limit = int(limit_str)
+        assert limit > 0, 'Expected limit more then `0`'
+
+        return limit
 
     def get_recipes(self, author: User):
-        recipes = author.recipes.values('id', 'name', 'image', 'cooking_time')
+        recipes = author.recipes.all()
         self.context['recipes_count'] = len(recipes)
-        return recipes[0:self.produce_recipe_limit()]
+        return [
+            SubscriptionReadRecipeSerialiser(recipe, context=self.context).data
+            for recipe in recipes
+        ][0:self.produce_recipe_limit()]
 
     def get_recipes_count(self, _: User):
         assert 'recipes_count' in self.context, (
