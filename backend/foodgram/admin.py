@@ -1,10 +1,10 @@
 from django.contrib import admin
+from django.db.models import Count
 from django.db.models.query import QuerySet
 from django.http import HttpRequest
-from django.db.models import Count
 
-from .models import (Ingredient, FavoriteRecipe, ShoppingCartRecipe,
-                     Recipe, RecipeIngredient, RecipeShortLink, RecipeTag,
+from .models import (FavoriteRecipe, Ingredient, Recipe, RecipeIngredient,
+                     RecipeShortLink, RecipeTag, ShoppingCartRecipe,
                      Subscription, Tag)
 
 

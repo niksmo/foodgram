@@ -1,14 +1,12 @@
-from typing import Type
 from secrets import token_urlsafe
+from typing import Type
 
 from django.contrib.auth import get_user_model
 from django.db.models import Model, Sum
 from django.db.models.functions import Lower
-from django.http.response import HttpResponseBase, FileResponse
+from django.http.response import FileResponse, HttpResponseBase
 from django.shortcuts import get_object_or_404
-
 from djoser.views import UserViewSet as DjoserUserViewSet
-
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
@@ -18,16 +16,15 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.serializers import ModelSerializer
 
-from api.filters import IngredientListFilter, RecipeListFilter
-from api.permissions import IsAuthorAdminOrReadOnly
-from api.serializers import (AvatarSerializer, FavoriteShoppingCartSerializer,
-                             IngredientSerializer, RecipeSerializer,
-                             SubscriptionSerializer, TagSerializer)
-
 from foodgram import models
 
-from .const import (HttpMethod, LOOKUP_DIGIT_PATTERN,
-                    SHORT_LINK_TOKEN_NBYTES, SHORT_LINK_URL_PATH)
+from .const import (LOOKUP_DIGIT_PATTERN, SHORT_LINK_TOKEN_NBYTES,
+                    SHORT_LINK_URL_PATH, HttpMethod)
+from .filters import IngredientListFilter, RecipeListFilter
+from .permissions import IsAuthorAdminOrReadOnly
+from .serializers import (AvatarSerializer, FavoriteShoppingCartSerializer,
+                          IngredientSerializer, RecipeSerializer,
+                          SubscriptionSerializer, TagSerializer)
 
 User = get_user_model()
 

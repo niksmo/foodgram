@@ -1,19 +1,20 @@
 from typing import Any, Type, Union
 
+import djoser.serializers as djoser_serializers
+from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models import Manager, Model
-
-import djoser.serializers as djoser_serializers
-
 from drf_extra_fields.fields import Base64ImageField
-
 from rest_framework import serializers
 from rest_framework.exceptions import APIException, ValidationError
 from rest_framework.request import Request
+from users.models import MyUser
 
 from foodgram import models
-from users.models import MyUser as User
+
 from .validators import empty_image_validator, repetitions_id_validator
+
+User = get_user_model()
 
 
 class UserCreateSerializer(djoser_serializers.UserCreateSerializer):
@@ -28,12 +29,12 @@ class UserReadSerializer(serializers.ModelSerializer):
     is_subscribed = serializers.SerializerMethodField()
 
     class Meta:
-        model = models.User
+        model = User
         fields = ('id', 'username', 'first_name', 'last_name',
                   'email', 'is_subscribed', 'avatar')
         read_only_fields = ('id', 'is_subscribed', 'avatar')
 
-    def get_is_subscribed(self, author: User) -> bool:
+    def get_is_subscribed(self, author: MyUser) -> bool:
         if 'request' not in self.context:
             return False
 
@@ -54,7 +55,7 @@ class AvatarSerializer(serializers.ModelSerializer):
     avatar = Base64ImageField()
 
     class Meta:
-        model = models.User
+        model = User
         fields = ('avatar',)
 
 
@@ -268,7 +269,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
     is_subscribed = serializers.ReadOnlyField(default=True)
 
     class Meta:
-        model = models.User
+        model = User
         fields = ('id', 'username', 'first_name', 'last_name', 'email',
                   'is_subscribed', 'recipes', 'recipes_count', 'avatar')
 
@@ -284,7 +285,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
 
         return limit
 
-    def get_recipes(self, author: User):
+    def get_recipes(self, author: MyUser):
         recipes = author.recipes.all()
         self.context['recipes_count'] = len(recipes)
         return [
@@ -292,7 +293,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
             for recipe in recipes
         ][0:self.produce_recipe_limit()]
 
-    def get_recipes_count(self, _: User):
+    def get_recipes_count(self, _: MyUser):
         assert 'recipes_count' in self.context, (
             '`recipes_count` '
             'should being after `recipes` in `self.Meta.fields`'
