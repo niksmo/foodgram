@@ -1,0 +1,10 @@
+**/.DS_Store
+.dockerignore
+Dockerfile
+.git
+.gitignore
+__pycache__/
+venv
+.env
+README.md
+media/
