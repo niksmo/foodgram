@@ -7,7 +7,9 @@ SECRET_KEY = getenv('SECRET_KEY', 'django_sercret_key')
 
 DEBUG = getenv('DEBUG', 'False').title() == 'True'
 
-ALLOWED_HOSTS = getenv('ALLOWED_HOSTS', '').split()
+ALLOWED_HOSTS = getenv('ALLOWED_HOSTS', '127.0.0.1').split()
+
+CSRF_TRUSTED_ORIGINS = getenv('CSRF_TRUSTED_ORIGINS', '').split()
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -66,8 +68,8 @@ DATABASES = {
         'NAME': getenv('POSTGRES_DB', 'django'),
         'USER': getenv('POSTGRES_USER', 'django'),
         'PASSWORD': getenv('POSTGRES_PASSWORD', ''),
-        'HOST': getenv('DB_HOST', ''),
-        'PORT': getenv('DB_PORT', 5432)
+        'HOST': getenv('DB_HOST', '127.0.0.1'),
+        'PORT': getenv('DB_PORT', 5432),
     }
 }
 
