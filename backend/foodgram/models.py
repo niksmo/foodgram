@@ -2,8 +2,7 @@ from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator
 from django.db import models
 
-from . import const
-from . import utils
+from . import const, utils
 
 User = get_user_model()
 

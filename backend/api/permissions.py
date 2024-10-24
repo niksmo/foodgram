@@ -1,7 +1,6 @@
 from django.db.models import Model
-
 from rest_framework.exceptions import NotFound
-from rest_framework.permissions import BasePermission, SAFE_METHODS
+from rest_framework.permissions import SAFE_METHODS, BasePermission
 from rest_framework.request import Request
 
 

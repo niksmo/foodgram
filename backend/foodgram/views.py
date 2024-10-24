@@ -1,10 +1,10 @@
-from django.views import View
 from django.http.request import HttpRequest
 from django.http.response import HttpResponse, HttpResponsePermanentRedirect
 from django.shortcuts import get_object_or_404
+from django.views import View
 
-from .models import RecipeShortLink
 from .const import FRONTEND_RECIPES_PATH
+from .models import RecipeShortLink
 
 
 class RecipeShortLinkView(View):
