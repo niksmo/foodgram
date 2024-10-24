@@ -38,12 +38,12 @@ class UserReadSerializer(serializers.ModelSerializer):
             return False
 
         request: Request = self.context['request']
-        if not request.auth:
+        if not request.auth or request.user == author:
             return False
 
         if not hasattr(self, '_subs_authors_id'):
             self._subs_authors_id = {
-                author.pk for author
+                sub.author_id for sub
                 in request.user.subscriptions_set.all()
             }
 
