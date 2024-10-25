@@ -154,7 +154,7 @@ class RecipeIngredientCreateUpdateSerializer(serializers.Serializer):
     amount = serializers.IntegerField(min_value=1)
 
 
-class RecipeSerializer(serializers.ModelSerializer):
+class RecipeCreateSerializer(serializers.ModelSerializer):
     tags = serializers.ListField(
         child=serializers.IntegerField(
             min_value=1,
@@ -219,6 +219,25 @@ class RecipeSerializer(serializers.ModelSerializer):
 
         return recipe
 
+    def _set_tags_ingredients(self, recipe, tags, ingredients) -> None:
+        models.RecipeTag.objects.bulk_create(
+            (models.RecipeTag(recipe=recipe, tag_id=id) for id in tags)
+        )
+
+        models.RecipeIngredient.objects.bulk_create(
+            (models.RecipeIngredient(
+                recipe=recipe,
+                ingredient_id=item['id'],
+                amount=item['amount']
+            )
+                for item in ingredients)
+        )
+
+
+class RecipeUpdateSerializer(RecipeCreateSerializer):
+
+    image = Base64ImageField(required=False)
+
     def update(self, recipe: models.Recipe,
                validated_data: dict[str, Any]) -> models.Recipe:
         tags = validated_data.pop('tags')
@@ -234,20 +253,6 @@ class RecipeSerializer(serializers.ModelSerializer):
             raise APIException()
 
         return recipe
-
-    def _set_tags_ingredients(self, recipe, tags, ingredients) -> None:
-        models.RecipeTag.objects.bulk_create(
-            (models.RecipeTag(recipe=recipe, tag_id=id) for id in tags)
-        )
-
-        models.RecipeIngredient.objects.bulk_create(
-            (models.RecipeIngredient(
-                recipe=recipe,
-                ingredient_id=item['id'],
-                amount=item['amount']
-            )
-                for item in ingredients)
-        )
 
 
 class FavoriteShoppingCartSerializer(serializers.ModelSerializer):

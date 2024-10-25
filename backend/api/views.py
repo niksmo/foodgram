@@ -21,7 +21,8 @@ from api.const import (LOOKUP_DIGIT_PATTERN, SHORT_LINK_TOKEN_NBYTES,
 from api.filters import IngredientListFilter, RecipeListFilter
 from api.permissions import IsAuthorAdminOrReadOnly
 from api.serializers import (AvatarSerializer, FavoriteShoppingCartSerializer,
-                             IngredientSerializer, RecipeSerializer,
+                             IngredientSerializer, RecipeCreateSerializer,
+                             RecipeReadSerializer, RecipeUpdateSerializer,
                              SubscriptionSerializer, TagSerializer)
 from foodgram import models
 
@@ -138,10 +139,17 @@ class RecipeViewSet(viewsets.ModelViewSet):
     queryset = models.Recipe.objects.select_related(
         'author'
     ).prefetch_related('tags')
-    serializer_class = RecipeSerializer
+    serializer_class = RecipeReadSerializer
     filterset_class = RecipeListFilter
     permission_classes = [IsAuthenticatedOrReadOnly,
                           IsAuthorAdminOrReadOnly]
+
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return RecipeCreateSerializer
+        elif self.action == 'partial_update':
+            return RecipeUpdateSerializer
+        return super().get_serializer_class()
 
     def perform_create(self, serializer: ModelSerializer) -> None:
         serializer.save(author=self.request.user)
