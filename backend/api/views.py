@@ -14,16 +14,17 @@ from rest_framework.permissions import (IsAuthenticated,
                                         IsAuthenticatedOrReadOnly)
 from rest_framework.request import Request
 from rest_framework.response import Response
-from rest_framework.serializers import ModelSerializer
+from rest_framework.serializers import BaseSerializer, ModelSerializer
 
 from api.const import (LOOKUP_DIGIT_PATTERN, SHORT_LINK_TOKEN_NBYTES,
                        SHORT_LINK_URL_PATH, HttpMethod)
 from api.filters import IngredientListFilter, RecipeListFilter
 from api.permissions import IsAuthorAdminOrReadOnly
-from api.serializers import (AvatarSerializer, FavoriteShoppingCartSerializer,
-                             IngredientSerializer, RecipeCreateSerializer,
-                             RecipeReadSerializer, RecipeUpdateSerializer,
-                             SubscriptionSerializer, TagSerializer)
+from api.serializers import (FavoriteSerializer, IngredientSerializer,
+                             RecipeCreateSerializer, RecipeReadSerializer,
+                             RecipeUpdateSerializer, ShoppingCartSerializer,
+                             SubscriptionSerializer, TagSerializer,
+                             UserAvatarSerializer)
 from foodgram import models
 
 User = get_user_model()
@@ -43,7 +44,7 @@ class UserViewSet(DjoserUserViewSet):
 
     def get_serializer_class(self) -> Type[ModelSerializer]:
         if self.action == 'avatar':
-            return AvatarSerializer
+            return UserAvatarSerializer
         if (self.action == 'subscriptions'
                 or self.action == 'subscribe'):
             return SubscriptionSerializer
@@ -144,11 +145,15 @@ class RecipeViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticatedOrReadOnly,
                           IsAuthorAdminOrReadOnly]
 
-    def get_serializer_class(self):
+    def get_serializer_class(self) -> Type[BaseSerializer]:
         if self.action == 'create':
             return RecipeCreateSerializer
         elif self.action == 'partial_update':
             return RecipeUpdateSerializer
+        elif self.action == 'favorite':
+            return FavoriteSerializer
+        elif self.action == 'shopping_cart':
+            return ShoppingCartSerializer
         return super().get_serializer_class()
 
     def perform_create(self, serializer: ModelSerializer) -> None:
@@ -186,17 +191,17 @@ class RecipeViewSet(viewsets.ModelViewSet):
     @action([HttpMethod.POST, HttpMethod.DELETE], detail=True,
             permission_classes=[IsAuthenticatedOrReadOnly])
     def favorite(self, request: Request, recipe_id: str) -> Response:
-        return self.add_to_fav_or_shop_cart(request, recipe_id,
-                                            models.FavoriteRecipe)
+        return self._add_fav_shop(request, recipe_id,
+                                  models.FavoriteRecipe)
 
     @action([HttpMethod.POST, HttpMethod.DELETE], detail=True,
             permission_classes=[IsAuthenticatedOrReadOnly])
     def shopping_cart(self, request: Request, recipe_id: str) -> Response:
-        return self.add_to_fav_or_shop_cart(request, recipe_id,
-                                            models.ShoppingCartRecipe)
+        return self._add_fav_shop(request, recipe_id,
+                                  models.ShoppingCartRecipe)
 
-    def add_to_fav_or_shop_cart(self, request: Request, recipe_id: str,
-                                inter_model: Type[Model]) -> Response:
+    def _add_fav_shop(self, request: Request, recipe_id: str,
+                      inter_model: Type[Model]) -> Response:
         recipe = self._get_recipe(recipe_id)
         stored_obj_qs = inter_model.objects.filter(user=request.user,
                                                    recipe=recipe)
@@ -212,7 +217,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
         inter_model.objects.create(user=request.user, recipe=recipe)
 
-        return Response(FavoriteShoppingCartSerializer(recipe).data,
+        serializer = self.get_serializer_class()
+
+        return Response(serializer(recipe).data,
                         status=status.HTTP_201_CREATED)
 
     @action([HttpMethod.GET], detail=False,

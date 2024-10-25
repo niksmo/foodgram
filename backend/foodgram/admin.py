@@ -4,14 +4,8 @@ from django.db.models.query import QuerySet
 from django.http import HttpRequest
 
 from foodgram.models import (FavoriteRecipe, Ingredient, Recipe,
-                             RecipeIngredient, RecipeShortLink, RecipeTag,
-                             ShoppingCartRecipe, Subscription, Tag)
-
-
-@admin.register(Subscription)
-class SubscriptionAdmin(admin.ModelAdmin):
-    list_display = ('user', 'author', 'created_at')
-    list_display_links = ('user',)
+                             RecipeIngredient, RecipeShortLink,
+                             ShoppingCartRecipe, Tag)
 
 
 @admin.register(Ingredient)
@@ -25,11 +19,13 @@ class TagAdmin(admin.ModelAdmin):
 
 
 class RecipeTagInLine(admin.TabularInline):
-    model = RecipeTag
+    model = Recipe.tags.through
+    min_num = 1
 
 
 class RecipeIngredientInLine(admin.TabularInline):
     model = RecipeIngredient
+    min_num = 1
 
 
 @admin.register(Recipe)
@@ -62,17 +58,17 @@ class RecipeAdmin(admin.ModelAdmin):
 
 @admin.register(FavoriteRecipe)
 class FavoriteRecipeAdmin(admin.ModelAdmin):
-    list_display = ('recipe', 'user', 'created_at')
+    list_display = ('recipe', 'user')
     list_display_links = ('recipe',)
 
 
 @admin.register(ShoppingCartRecipe)
 class ShoppingCartRecipeAdmin(admin.ModelAdmin):
-    list_display = ('recipe', 'user', 'created_at')
+    list_display = ('recipe', 'user')
     list_display_links = ('recipe',)
 
 
 @admin.register(RecipeShortLink)
 class RecipeShortLinkAdmin(admin.ModelAdmin):
-    list_display = ('recipe', 'token', 'created_at')
+    list_display = ('recipe', 'token')
     list_display_links = ('recipe',)

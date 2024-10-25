@@ -25,6 +25,7 @@ services:
     volumes:
       - static:/var/www/static:ro
       - media:/var/www/media:ro
+      - ./docs:/var/www/api/docs:ro
     networks:
       - backend-net
     depends_on:
