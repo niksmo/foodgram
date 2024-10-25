@@ -3,8 +3,8 @@ from django.http.response import HttpResponse, HttpResponsePermanentRedirect
 from django.shortcuts import get_object_or_404
 from django.views import View
 
-from .const import FRONTEND_RECIPES_PATH
-from .models import RecipeShortLink
+from foodgram.const import FRONTEND_RECIPES_PATH
+from foodgram.models import RecipeShortLink
 
 
 class RecipeShortLinkView(View):

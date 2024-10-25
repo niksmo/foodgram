@@ -3,9 +3,9 @@ from django.db.models import Count
 from django.db.models.query import QuerySet
 from django.http import HttpRequest
 
-from .models import (FavoriteRecipe, Ingredient, Recipe, RecipeIngredient,
-                     RecipeShortLink, RecipeTag, ShoppingCartRecipe,
-                     Subscription, Tag)
+from foodgram.models import (FavoriteRecipe, Ingredient, Recipe,
+                             RecipeIngredient, RecipeShortLink, RecipeTag,
+                             ShoppingCartRecipe, Subscription, Tag)
 
 
 @admin.register(Subscription)

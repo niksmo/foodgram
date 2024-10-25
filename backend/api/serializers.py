@@ -8,11 +8,10 @@ from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
 from rest_framework.exceptions import APIException, ValidationError
 from rest_framework.request import Request
-from users.models import MyUser
 
+from api.validators import empty_image_validator, repetitions_id_validator
 from foodgram import models
-
-from .validators import empty_image_validator, repetitions_id_validator
+from users.models import MyUser
 
 User = get_user_model()
 

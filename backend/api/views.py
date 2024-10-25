@@ -16,15 +16,14 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.serializers import ModelSerializer
 
+from api.const import (LOOKUP_DIGIT_PATTERN, SHORT_LINK_TOKEN_NBYTES,
+                       SHORT_LINK_URL_PATH, HttpMethod)
+from api.filters import IngredientListFilter, RecipeListFilter
+from api.permissions import IsAuthorAdminOrReadOnly
+from api.serializers import (AvatarSerializer, FavoriteShoppingCartSerializer,
+                             IngredientSerializer, RecipeSerializer,
+                             SubscriptionSerializer, TagSerializer)
 from foodgram import models
-
-from .const import (LOOKUP_DIGIT_PATTERN, SHORT_LINK_TOKEN_NBYTES,
-                    SHORT_LINK_URL_PATH, HttpMethod)
-from .filters import IngredientListFilter, RecipeListFilter
-from .permissions import IsAuthorAdminOrReadOnly
-from .serializers import (AvatarSerializer, FavoriteShoppingCartSerializer,
-                          IngredientSerializer, RecipeSerializer,
-                          SubscriptionSerializer, TagSerializer)
 
 User = get_user_model()
 
