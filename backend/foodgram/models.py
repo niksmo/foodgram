@@ -7,15 +7,6 @@ from . import const, utils
 User = get_user_model()
 
 
-class AbstractCreatedAt(models.Model):
-    created_at = models.DateTimeField(
-        'создано', auto_now_add=True
-    )
-
-    class Meta:
-        abstract = True
-
-
 class Ingredient(models.Model):
     name = models.CharField(
         'название',
@@ -62,7 +53,11 @@ class Tag(models.Model):
         return utils.get_model_admin_name(self.name)
 
 
-class Recipe(AbstractCreatedAt):
+def test_validator(value):
+    print(value)
+
+
+class Recipe(models.Model):
     name = models.CharField(
         'название',
         max_length=const.MAX_RECIPE_NAME_LENGTH
@@ -94,9 +89,10 @@ class Recipe(AbstractCreatedAt):
         through='RecipeIngredient'
     )
 
-    tags = models.ManyToManyField(
-        Tag,
-        through='RecipeTag'
+    tags = models.ManyToManyField(Tag)
+
+    created_at = models.DateTimeField(
+        'создано', auto_now_add=True
     )
 
     class Meta:
@@ -142,30 +138,7 @@ class RecipeIngredient(models.Model):
         ]
 
 
-class RecipeTag(models.Model):
-    tag = models.ForeignKey(
-        Tag,
-        on_delete=models.CASCADE,
-        related_name='recipes',
-        verbose_name='тег'
-    )
-
-    recipe = models.ForeignKey(
-        Recipe,
-        on_delete=models.CASCADE,
-        related_name='tags_set'
-    )
-
-    class Meta:
-        verbose_name = 'тег рецепта'
-        verbose_name_plural = 'Теги рецепта'
-        constraints = [
-            models.UniqueConstraint(fields=('tag', 'recipe'),
-                                    name='unique_tag'),
-        ]
-
-
-class FavoriteRecipe(AbstractCreatedAt):
+class FavoriteRecipe(models.Model):
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -192,7 +165,7 @@ class FavoriteRecipe(AbstractCreatedAt):
         return f'Запись в избранном <id: {self.pk}>'
 
 
-class ShoppingCartRecipe(AbstractCreatedAt):
+class ShoppingCartRecipe(models.Model):
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -218,38 +191,7 @@ class ShoppingCartRecipe(AbstractCreatedAt):
         return f'Запись в корзине покупок <id: {self.pk}>'
 
 
-class Subscription(AbstractCreatedAt):
-    user = models.ForeignKey(
-        User, on_delete=models.CASCADE,
-        related_name='subscriptions_set',
-        verbose_name='пользователь'
-    )
-
-    author = models.ForeignKey(
-        User, on_delete=models.CASCADE,
-        related_name='subscribers_set',
-        verbose_name='автор'
-    )
-
-    class Meta:
-        ordering = ('-created_at',)
-        verbose_name = 'подписка'
-        verbose_name_plural = 'Подписки'
-        constraints = [
-            models.UniqueConstraint(
-                fields=('user', 'author'),
-                name='unique_subscriptions'
-            ),
-            models.CheckConstraint(
-                check=~models.Q(user__exact=models.F('author')),
-                name='user_cant_follow_on_self')
-        ]
-
-    def __str__(self) -> str:
-        return f'Запись в подписках <id: {self.pk}>'
-
-
-class RecipeShortLink(AbstractCreatedAt):
+class RecipeShortLink(models.Model):
     recipe = models.OneToOneField(
         Recipe, on_delete=models.CASCADE,
         related_name='link_token'
