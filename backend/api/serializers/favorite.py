@@ -1,9 +1,7 @@
-from rest_framework import serializers
+from api.serializers.common import CommonFavoriteShopCartSerializer
+from foodgram.models import Favorite
 
-from foodgram import models
 
-
-class FavoriteSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = models.Recipe
-        fields = ('id', 'name', 'image', 'cooking_time')
+class FavoriteSerializer(CommonFavoriteShopCartSerializer):
+    class Meta(CommonFavoriteShopCartSerializer.Meta):
+        model = Favorite

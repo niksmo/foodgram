@@ -1,3 +1,6 @@
+from typing import Any
+from collections.abc import Iterable
+
 from .const import (DEFAULT_MODEL_ADMIN_NAME_LENGTH,
                     DEFAULT_MODEL_ADMIN_NAME_SUFFIX)
 
@@ -20,3 +23,9 @@ def make_model_str(field: str,
 
     return (f'{field[:max_length - len(suffix)] }'
             f'{suffix}')
+
+
+def make_shopping_list(ingredients: Iterable[dict[str, Any]]) -> str:
+    return '\n'.join(((f'{item["name"]} — '
+                       f'{item["amount"]} {item["unit"]}')
+                      for item in ingredients))
