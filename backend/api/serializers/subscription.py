@@ -2,58 +2,60 @@ from typing import Union
 
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 from rest_framework.request import Request
+from rest_framework.utils.serializer_helpers import ReturnDict, ReturnList
 
-from foodgram import models
+from api.serializers.user import UserReadSerializer
+from foodgram.models import Recipe
+from users.models import Subscription
 from users.models import User as UserType
 
 User = get_user_model()
 
 
 class SubscriptionReadRecipeSerialiser(serializers.ModelSerializer):
+    # RETURN HERE AFTER RECIPE
     class Meta:
-        model = models.Recipe
+        model = Recipe
         fields = ('id', 'name', 'image', 'cooking_time')
 
 
-class SubscriptionSerializer(serializers.ModelSerializer):
+class SubscriptionSerializer(UserReadSerializer):
     recipes = serializers.SerializerMethodField()
-    recipes_count = serializers.SerializerMethodField()
+    recipes_count = serializers.IntegerField(read_only=True)
     is_subscribed = serializers.ReadOnlyField(default=True)
 
-    class Meta:
-        model = User
-        fields = ('id', 'username', 'first_name', 'last_name', 'email',
-                  'is_subscribed', 'recipes', 'recipes_count', 'avatar')
+    class Meta(UserReadSerializer.Meta):
+        fields = (UserReadSerializer.Meta.fields
+                  + ('is_subscribed', 'recipes', 'recipes_count'))
+        read_only_fields = ('username', 'first_name', 'last_name',
+                            'email', 'avatar')
 
-    def produce_recipe_limit(self) -> Union[int, None]:
+    def validate(self, data):
+        if self.context['request'].user.id == self.initial_data['id']:
+            raise ValidationError('Пользователь и автор совпадают.')
+        return data
+
+    def get_recipes(self, author: UserType) -> Union[ReturnList, ReturnDict]:
+        recipes_qs = author.recipes.all()
         request: Request = self.context['request']
-        if 'recipes_limit' not in request.query_params:
-            return None
 
-        limit_str: str = request.query_params['recipes_limit']
-        assert limit_str.isdigit(), 'Expected limit is converting to `int`'
-        limit = int(limit_str)
-        assert limit > 0, 'Expected limit more then `0`'
+        if ('recipes_limit' in request.query_params
+                and request.query_params['recipes_limit'].isdigit()):
+            limit = int(request.query_params['recipes_limit'])
 
-        return limit
+            if limit > 0:
+                recipes_qs = recipes_qs[:limit]
 
-    def get_recipes(self, author: UserType):
-        recipes = author.recipes.all()
-        self.context['recipes_count'] = len(recipes)
-        return [
-            SubscriptionReadRecipeSerialiser(recipe, context=self.context).data
-            for recipe in recipes
-        ][0:self.produce_recipe_limit()]
+        return SubscriptionReadRecipeSerialiser(recipes_qs,
+                                                many=True,
+                                                context=self.context).data
 
-    def get_recipes_count(self, _: UserType):
-        assert 'recipes_count' in self.context, (
-            '`recipes_count` '
-            'should being after `recipes` in `self.Meta.fields`'
+    def create(self, validated_data):
+        author = validated_data.pop('author')
+        Subscription.objects.create(
+            user_id=validated_data['user_id'],
+            author_id=author.id
         )
-        return self.context['recipes_count']
-
-    def to_internal_value(self, data):
-        raise NotImplementedError(
-            'Unnecessary method which may cause unexpected behavior.'
-        )
+        return author

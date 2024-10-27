@@ -2,7 +2,7 @@ from secrets import token_urlsafe
 from typing import Type
 
 from django.contrib.auth import get_user_model
-from django.db.models import Model, Sum
+from django.db.models import Count, Model, Sum
 from django.db.models.functions import Lower
 from django.http.response import FileResponse, HttpResponseBase
 from django.shortcuts import get_object_or_404
@@ -26,6 +26,7 @@ from api.serializers import (FavoriteSerializer, IngredientSerializer,
 from core.const import (LOOKUP_DIGIT_PATTERN, SHORT_LINK_TOKEN_NBYTES,
                         SHORT_LINK_URL_PATH, HttpMethod)
 from foodgram import models
+from users.models import Subscription
 
 User = get_user_model()
 
@@ -42,66 +43,65 @@ class UserViewSet(DjoserUserViewSet):
     lookup_value_regex = LOOKUP_DIGIT_PATTERN
     queryset = User.objects.all()
 
-    def get_serializer_class(self) -> Type[ModelSerializer]:
-        if self.action == 'avatar':
-            return UserAvatarSerializer
-        if (self.action == 'subscriptions'
-                or self.action == 'subscribe'):
-            return SubscriptionSerializer
-        return super().get_serializer_class()
-
-    @action([HttpMethod.GET],
-            detail=False, permission_classes=[IsAuthenticated])
+    @action([HttpMethod.GET], detail=False,
+            permission_classes=[IsAuthenticated])
     def me(self, request: Request) -> Response:
         self.get_object = self.get_instance
         return self.retrieve(request)
 
-    @action([HttpMethod.PUT, HttpMethod.DELETE],
-            url_path='me/avatar',
-            detail=False,
+    @action([HttpMethod.PUT], url_path='me/avatar',
+            detail=False, serializer_class=UserAvatarSerializer,
             permission_classes=[IsAuthenticated])
     def avatar(self, request: Request) -> Response:
-        if request.method.lower() == HttpMethod.DELETE:
-            request.user.avatar = None
-            request.user.save(update_fields=('avatar',))
-            return Response(status=status.HTTP_204_NO_CONTENT)
         self.get_object = self.get_instance
         return self.update(request)
 
+    @avatar.mapping.delete
+    def delete_avatar(self, request: Request) -> Response:
+        request.user.avatar.delete(save=True)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
     @action(methods=[HttpMethod.GET], detail=False,
+            serializer_class=SubscriptionSerializer,
             permission_classes=[IsAuthenticated])
     def subscriptions(self, request: Request) -> Response:
-        subs_qs = request.user.users_subscriptions.select_related(
-            'author').all()
-        serializer = self.get_serializer(
-            self.paginate_queryset([item.author for item in subs_qs]),
-            many=True
-        )
+        authors = User.objects.filter(
+            subscriptions_on_author__user=request.user
+        ).annotate(recipes_count=Count('recipes')).all()
+        serializer = self.get_serializer(self.paginate_queryset(authors),
+                                         many=True)
         return self.get_paginated_response(serializer.data)
 
-    @action([HttpMethod.POST, HttpMethod.DELETE], detail=True,
+    @action([HttpMethod.POST], detail=True,
+            serializer_class=SubscriptionSerializer,
             permission_classes=[IsAuthenticated])
     def subscribe(self, request: Request, id: str) -> Response:
-        if request.user.id == int(id):
-            raise ValidationError(
-                {self.action: 'Пользователь и автор совпадают.'}
-            )
-        author = get_object_or_404(User, pk=id)
-        subscription_qs = models.Subscription.objects.filter(user=request.user,
-                                                             author=author)
+        author = get_object_or_404(
+            User.objects.annotate(recipes_count=Count('recipes')),
+            pk=id
+        )
 
-        if request.method.lower() == HttpMethod.DELETE:
-            if not subscription_qs:
-                raise ValidationError({self.action: 'Подписка отсутствует.'})
-            subscription_qs[0].delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
-
-        if subscription_qs:
+        if Subscription.objects.filter(user=request.user,
+                                       author=author).exists():
             raise ValidationError({self.action: 'Повторная подписка.'})
 
-        models.Subscription.objects.create(user=request.user, author=author)
-        return Response(self.get_serializer(author).data,
-                        status=status.HTTP_201_CREATED)
+        serializer = self.get_serializer(data={'id': author.pk})
+        serializer.is_valid(raise_exception=True)
+        serializer.save(user_id=request.user.pk, author=author)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @subscribe.mapping.delete
+    def unsubscribe(self, request: Request, id: str) -> Response:
+        get_object_or_404(User, pk=id)
+
+        n_removed, _ = Subscription.objects.filter(
+            user=request.user, author_id=id
+        ).delete()
+
+        if not n_removed:
+            raise ValidationError({self.action: 'Подписка отсутствует.'})
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
