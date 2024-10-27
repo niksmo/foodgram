@@ -228,7 +228,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def download_shopping_cart(self, request: Request) -> HttpResponseBase:
         recipes_id = tuple(
             item['recipe_id'] for item
-            in request.user.shopping_cart.all().values('recipe_id')
+            in request.user.shoppingcart_set.all().values('recipe_id')
         )
         if not recipes_id:
             ValidationError({self.action: 'Корзина пуста.'})

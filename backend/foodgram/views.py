@@ -7,10 +7,11 @@ from foodgram.models import RecipeShortLink
 
 
 class RecipeShortLinkView(View):
-    def get(self, request: HttpRequest, token: str) -> HttpResponse:
+    def get(self, request: HttpRequest, slug: str) -> HttpResponse:
         try:
             short_link = RecipeShortLink.objects.select_related(
-                'recipe').get(token=token)
+                'recipe'
+            ).get(slug=slug)
         except RecipeShortLink.DoesNotExist:
             redirect_url = request.build_absolute_uri('/not_found')
         else:

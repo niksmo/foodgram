@@ -49,7 +49,7 @@ class RecipeReadSerializer(serializers.ModelSerializer):
     """Special serializer for representation RecipeSerializer."""
 
     tags = TagSerializer(many=True)
-    ingredients = IngredientReadSerializer(source='recipe_ingredient',
+    ingredients = IngredientReadSerializer(source='recipeingredient_set',
                                            many=True)
     author = UserReadSerializer()
 
@@ -70,7 +70,7 @@ class RecipeReadSerializer(serializers.ModelSerializer):
 
         if not hasattr(self, '_user_favorited'):
             self._user_favorited = {favorite.recipe_id for favorite
-                                    in request.user.favorite.all()}
+                                    in request.user.favorite_set.all()}
 
         return obj.pk in self._user_favorited
 
@@ -84,7 +84,7 @@ class RecipeReadSerializer(serializers.ModelSerializer):
 
         if not hasattr(self, '_user_shopping_cart'):
             self._user_shopping_cart = {item.recipe_id for item
-                                        in request.user.shopping_cart.all()}
+                                        in request.user.shoppingcart_set.all()}
 
         return obj.pk in self._user_shopping_cart
 
@@ -104,7 +104,7 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
     )
 
     ingredients = IngredientCreateUpdateSerializer(
-        many=True, source='recipe_ingredient')
+        many=True, source='recipeingredient_set')
 
     image = Base64ImageField(validators=(empty_image_validator,))
 
@@ -135,7 +135,7 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
                              'не существует.')
 
     def create(self, validated_data: dict[str, Any]) -> models.Recipe:
-        ingredients = validated_data.pop('recipe_ingredient')
+        ingredients = validated_data.pop('recipeingredient_set')
         recipe = super().create(validated_data)
         self._set_ingredients(recipe, ingredients)
         return recipe
@@ -160,7 +160,7 @@ class RecipeUpdateSerializer(RecipeCreateSerializer):
 
     def update(self, recipe: models.Recipe,
                validated_data: dict[str, Any]) -> models.Recipe:
-        ingredients = validated_data.pop('recipe_ingredient')
+        ingredients = validated_data.pop('recipeingredient_set')
 
         recipe = super().update(recipe, validated_data)
         models.RecipeIngredient.objects.filter(recipe=recipe).delete()

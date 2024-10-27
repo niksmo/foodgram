@@ -39,7 +39,7 @@ class RecipeListFilter(django_filters.FilterSet):
         if self.request.auth and int(value):
             queryset = queryset.filter(
                 pk__in=(item.recipe.id for item
-                        in self.request.user.favorite.all())
+                        in self.request.user.favorite_set.all())
             )
         return queryset
 
@@ -47,7 +47,7 @@ class RecipeListFilter(django_filters.FilterSet):
         if self.request.auth and int(value):
             queryset = queryset.filter(
                 pk__in=(item.recipe.id for item
-                        in self.request.user.shopping_cart.all())
+                        in self.request.user.shoppingcart_set.all())
             )
         return queryset
 

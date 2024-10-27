@@ -38,7 +38,7 @@ class RecipeCreateUpdateValidator:
         ing_unique_ids = self._verify_repetition(
             self._ingredients_field,
             (item['ingredient_id']
-             for item in values['recipe_ingredient']),
+             for item in values['recipeingredient_set']),
             errors
         )
 
