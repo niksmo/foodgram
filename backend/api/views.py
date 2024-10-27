@@ -16,8 +16,6 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.serializers import BaseSerializer, ModelSerializer
 
-from api.const import (LOOKUP_DIGIT_PATTERN, SHORT_LINK_TOKEN_NBYTES,
-                       SHORT_LINK_URL_PATH, HttpMethod)
 from api.filters import IngredientListFilter, RecipeListFilter
 from api.permissions import IsAuthorAdminOrReadOnly
 from api.serializers import (FavoriteSerializer, IngredientSerializer,
@@ -25,6 +23,8 @@ from api.serializers import (FavoriteSerializer, IngredientSerializer,
                              RecipeUpdateSerializer, ShoppingCartSerializer,
                              SubscriptionSerializer, TagSerializer,
                              UserAvatarSerializer)
+from core.const import (LOOKUP_DIGIT_PATTERN, SHORT_LINK_TOKEN_NBYTES,
+                        SHORT_LINK_URL_PATH, HttpMethod)
 from foodgram import models
 
 User = get_user_model()
@@ -71,7 +71,8 @@ class UserViewSet(DjoserUserViewSet):
     @action(methods=[HttpMethod.GET], detail=False,
             permission_classes=[IsAuthenticated])
     def subscriptions(self, request: Request) -> Response:
-        subs_qs = request.user.subscriptions_set.select_related('author').all()
+        subs_qs = request.user.users_subscriptions.select_related(
+            'author').all()
         serializer = self.get_serializer(
             self.paginate_queryset([item.author for item in subs_qs]),
             many=True

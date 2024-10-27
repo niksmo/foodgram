@@ -1,33 +1,38 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
-from django.utils.translation import gettext_lazy
+
+from core.const import MAX_EMAIL_LENGTH
+from core.factories import make_model_str
 
 
-class MyUser(AbstractUser):
-    email = models.EmailField(gettext_lazy('email address'), unique=True)
+class User(AbstractUser):
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS: tuple[str, ...] = ('username', 'first_name', 'last_name')
+
+    email = models.EmailField('Электронная почта', unique=True,
+                              max_length=MAX_EMAIL_LENGTH)
+
     avatar = models.ImageField('Аватар', upload_to='avatars', blank=True)
 
-    USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['username', 'first_name', 'last_name']
+    class Meta:
+        ordering = ('username',)
+        verbose_name = 'пользователь'
+        verbose_name_plural = 'Пользователи'
 
     def __str__(self) -> str:
-        return self.username
-
-    @property
-    def is_admin(self) -> bool:
-        return self.is_staff
+        return make_model_str(self.username)
 
 
 class Subscription(models.Model):
     user = models.ForeignKey(
-        MyUser, on_delete=models.CASCADE,
-        related_name='subscriptions_set',
+        User, on_delete=models.CASCADE,
+        related_name='users_subscriptions',
         verbose_name='пользователь'
     )
 
     author = models.ForeignKey(
-        MyUser, on_delete=models.CASCADE,
-        related_name='subscribers_set',
+        User, on_delete=models.CASCADE,
+        related_name='author_subscribers',
         verbose_name='автор'
     )
 
@@ -35,7 +40,7 @@ class Subscription(models.Model):
         ordering = ('author__username',)
         verbose_name = 'подписка'
         verbose_name_plural = 'Подписки'
-        constraints = [
+        constraints = (
             models.UniqueConstraint(
                 fields=('user', 'author'),
                 name='unique_subscriptions'
@@ -43,7 +48,7 @@ class Subscription(models.Model):
             models.CheckConstraint(
                 check=~models.Q(user__exact=models.F('author')),
                 name='user_cant_follow_on_self')
-        ]
+        )
 
     def __str__(self) -> str:
-        return f'Запись в подписках <id: {self.pk}>'
+        return make_model_str(f'Запись в подписках <id: {self.pk}>')

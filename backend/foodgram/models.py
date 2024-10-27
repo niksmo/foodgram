@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator
 from django.db import models
 
-from . import const, utils
+from core import const, factories
 
 User = get_user_model()
 
@@ -24,10 +24,10 @@ class Ingredient(models.Model):
     class Meta:
         ordering = ('name',)
         verbose_name = 'ингредиент'
-        verbose_name_plural = 'Ингродиенты'
+        verbose_name_plural = 'Ингредиенты'
 
     def __str__(self) -> str:
-        return utils.get_model_admin_name(self.name)
+        return factories.make_model_str(self.name)
 
 
 class Tag(models.Model):
@@ -50,11 +50,7 @@ class Tag(models.Model):
         verbose_name_plural = 'Теги'
 
     def __str__(self) -> str:
-        return utils.get_model_admin_name(self.name)
-
-
-def test_validator(value):
-    print(value)
+        return factories.make_model_str(self.name)
 
 
 class Recipe(models.Model):
@@ -74,7 +70,7 @@ class Recipe(models.Model):
     cooking_time = models.SmallIntegerField(
         'время приготовления',
         help_text='минут',
-        validators=[MinValueValidator(limit_value=1)]
+        validators=(MinValueValidator(limit_value=1),)
     )
 
     author = models.ForeignKey(
@@ -99,13 +95,13 @@ class Recipe(models.Model):
         verbose_name = 'рецепт'
         verbose_name_plural = 'Рецепты'
         ordering = ('-created_at',)
-        constraints = [
+        constraints = (
             models.CheckConstraint(name='positive_cooking_time',
-                                   check=models.Q(cooking_time__gt=0))
-        ]
+                                   check=models.Q(cooking_time__gt=0)),
+        )
 
     def __str__(self) -> str:
-        return utils.get_model_admin_name(self.name)
+        return factories.make_model_str(self.name)
 
 
 class RecipeIngredient(models.Model):
@@ -124,18 +120,18 @@ class RecipeIngredient(models.Model):
 
     amount = models.SmallIntegerField(
         'количество',
-        validators=[MinValueValidator(limit_value=1)]
+        validators=(MinValueValidator(limit_value=1),)
     )
 
     class Meta:
         verbose_name = 'ингредиент рецепта'
-        verbose_name_plural = 'Ингродиенты рецепта'
-        constraints = [
+        verbose_name_plural = 'Ингредиенты рецепта'
+        constraints = (
             models.UniqueConstraint(fields=('ingredient', 'recipe'),
                                     name='unique_ingredient'),
             models.CheckConstraint(name='positive_amount',
                                    check=models.Q(amount__gt=0))
-        ]
+        )
 
 
 class FavoriteRecipe(models.Model):
@@ -156,10 +152,10 @@ class FavoriteRecipe(models.Model):
     class Meta:
         verbose_name = 'избранное'
         verbose_name_plural = 'Избранные рецепты'
-        constraints = [
+        constraints = (
             models.UniqueConstraint(fields=('user', 'recipe'),
                                     name='unique_favorite'),
-        ]
+        )
 
     def __str__(self) -> str:
         return f'Запись в избранном <id: {self.pk}>'
@@ -181,14 +177,16 @@ class ShoppingCartRecipe(models.Model):
     class Meta:
         verbose_name = 'корзина покупок'
         verbose_name_plural = 'Корзины покупок'
-        constraints = [
+        constraints = (
             models.UniqueConstraint(fields=('user', 'recipe'),
                                     name=('shopping_cart_'
                                           'include_unique_recipes')),
-        ]
+        )
 
     def __str__(self) -> str:
-        return f'Запись в корзине покупок <id: {self.pk}>'
+        return factories.make_model_str(
+            f'Запись в корзине покупок <id: {self.pk}>'
+        )
 
 
 class RecipeShortLink(models.Model):
@@ -207,4 +205,6 @@ class RecipeShortLink(models.Model):
         verbose_name_plural = 'Короткие ссылки'
 
     def __str__(self) -> str:
-        return f'Запись в коротких ссылках <id: {self.pk}>'
+        return factories.make_model_str(
+            f'Запись в коротких ссылках <id: {self.pk}>'
+        )

@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.urls import include, path
 
-from api.const import SHORT_LINK_URL_PATH
+from core.const import SHORT_LINK_URL_PATH
 from foodgram.views import RecipeShortLinkView
 
 urlpatterns = [

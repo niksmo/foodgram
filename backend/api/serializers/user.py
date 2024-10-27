@@ -4,7 +4,7 @@ from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
 from rest_framework.request import Request
 
-from users.models import MyUser
+from users.models import User as UserType
 
 User = get_user_model()
 
@@ -26,7 +26,7 @@ class UserReadSerializer(serializers.ModelSerializer):
                   'email', 'is_subscribed', 'avatar')
         read_only_fields = ('id', 'is_subscribed', 'avatar')
 
-    def get_is_subscribed(self, author: MyUser) -> bool:
+    def get_is_subscribed(self, author: UserType) -> bool:
         if 'request' not in self.context:
             return False
 
@@ -37,7 +37,7 @@ class UserReadSerializer(serializers.ModelSerializer):
         if not hasattr(self, '_subs_authors_id'):
             self._subs_authors_id = {
                 sub.author_id for sub
-                in request.user.subscriptions_set.all()
+                in request.user.users_subscriptions.all()
             }
 
         return author.pk in self._subs_authors_id

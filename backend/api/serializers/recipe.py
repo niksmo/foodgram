@@ -6,10 +6,10 @@ from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
 from rest_framework.request import Request
 
-from api.const import SMALL_INTEGER_FIELD_MAX_VALUE
 from api.serializers.tag import TagSerializer
 from api.serializers.user import UserReadSerializer
 from api.validators import RecipeCreateUpdateValidator, empty_image_validator
+from core.const import SMALL_INTEGER_FIELD_MAX_VALUE
 from foodgram import models
 
 User = get_user_model()

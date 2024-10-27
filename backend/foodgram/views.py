@@ -2,7 +2,7 @@ from django.http.request import HttpRequest
 from django.http.response import HttpResponse, HttpResponsePermanentRedirect
 from django.views import View
 
-from foodgram.const import FRONTEND_RECIPES_PATH
+from core.const import FRONTEND_RECIPES_PATH
 from foodgram.models import RecipeShortLink
 
 

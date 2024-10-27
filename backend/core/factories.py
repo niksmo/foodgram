@@ -2,9 +2,9 @@ from .const import (DEFAULT_MODEL_ADMIN_NAME_LENGTH,
                     DEFAULT_MODEL_ADMIN_NAME_SUFFIX)
 
 
-def get_model_admin_name(field: str,
-                         max_length: int = DEFAULT_MODEL_ADMIN_NAME_LENGTH,
-                         suffix: str = DEFAULT_MODEL_ADMIN_NAME_SUFFIX):
+def make_model_str(field: str,
+                   max_length: int = DEFAULT_MODEL_ADMIN_NAME_LENGTH,
+                   suffix: str = DEFAULT_MODEL_ADMIN_NAME_SUFFIX) -> str:
     assert isinstance(field, str) and len(field) > 0, (
         '`field` length should more then `0`'
     )

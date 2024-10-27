@@ -5,7 +5,7 @@ from rest_framework import serializers
 from rest_framework.request import Request
 
 from foodgram import models
-from users.models import MyUser
+from users.models import User as UserType
 
 User = get_user_model()
 
@@ -38,7 +38,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
 
         return limit
 
-    def get_recipes(self, author: MyUser):
+    def get_recipes(self, author: UserType):
         recipes = author.recipes.all()
         self.context['recipes_count'] = len(recipes)
         return [
@@ -46,7 +46,7 @@ class SubscriptionSerializer(serializers.ModelSerializer):
             for recipe in recipes
         ][0:self.produce_recipe_limit()]
 
-    def get_recipes_count(self, _: MyUser):
+    def get_recipes_count(self, _: UserType):
         assert 'recipes_count' in self.context, (
             '`recipes_count` '
             'should being after `recipes` in `self.Meta.fields`'
