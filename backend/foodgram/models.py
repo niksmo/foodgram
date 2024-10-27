@@ -108,6 +108,9 @@ class RecipeIngredient(models.Model):
                                     name='unique_ingredient'),
         )
 
+    def __str__(self) -> str:
+        return factories.make_model_str(f'Ингредиент-рецепт <id: {self.pk}>')
+
 
 class UserRecipeIntermediateAbstract(models.Model):
     user = models.ForeignKey(User,
@@ -127,7 +130,7 @@ class UserRecipeIntermediateAbstract(models.Model):
 
     def __str__(self) -> str:
         return factories.make_model_str(
-            f'Запись в {self._meta.verbose_name} <id: {self.pk}'
+            f'Пользователь-{self._meta.verbose_name} <id: {self.pk}'
         )
 
 
@@ -159,5 +162,5 @@ class RecipeShortLink(models.Model):
 
     def __str__(self) -> str:
         return factories.make_model_str(
-            f'Запись в коротких ссылках <id: {self.pk}>'
+            f'Рецепт-ссылка <id: {self.pk}>'
         )

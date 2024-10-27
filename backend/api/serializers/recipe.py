@@ -1,14 +1,15 @@
-from typing import Any, NoReturn, Type
+from typing import Any, NoReturn
 
 from django.contrib.auth import get_user_model
-from django.db.models import Manager, Model
+from django.db.models import Manager
 from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 from rest_framework.request import Request
 
 from api.serializers.tag import TagSerializer
 from api.serializers.user import UserReadSerializer
-from api.validators import RecipeCreateUpdateValidator, empty_image_validator
+from api.validators import RecipeCreateUpdateValidator
 from core.const import SMALL_INTEGER_FIELD_MAX_VALUE
 from foodgram import models
 
@@ -106,7 +107,7 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
     ingredients = IngredientCreateUpdateSerializer(
         many=True, source='recipeingredient_set')
 
-    image = Base64ImageField(validators=(empty_image_validator,))
+    image = Base64ImageField()
 
     class Meta:
         model = models.Recipe
@@ -114,25 +115,10 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
         read_only_fields = ('author',)
         validators = (RecipeCreateUpdateValidator(),)
 
-    def _validate_objects_exists(self, model: Type[Model],
-                                 data: dict[str, Any],
-                                 errors: dict[str, Any]) -> None:
-        values = data[(field := f'{model.__name__.lower()}s')]
-
-        if isinstance(values[0], dict):
-            values = [item['id'] for item in values]
-
-        exists_list = model.objects.filter(pk__in=values).all()
-
-        if len(exists_list) != len(values):
-            exists_pk_set = {instance.pk for instance in exists_list}
-            not_exists = tuple(pk
-                               for pk in values
-                               if pk not in exists_pk_set)
-
-            errors[field] = (f'{model.__name__} c "id" '
-                             f'{sorted(not_exists)} '
-                             'не существует.')
+    def validate_image(self, value):
+        if not value:
+            raise ValidationError('Это поле не может быть пустым.')
+        return value
 
     def create(self, validated_data: dict[str, Any]) -> models.Recipe:
         ingredients = validated_data.pop('recipeingredient_set')
@@ -152,8 +138,7 @@ class RecipeCreateSerializer(serializers.ModelSerializer):
 
 
 class RecipeUpdateSerializer(RecipeCreateSerializer):
-    image = Base64ImageField(required=False,
-                             validators=(empty_image_validator,))
+    image = Base64ImageField(required=False)
 
     def create(self, validated_data: dict[str, Any]) -> NoReturn:
         raise NotImplementedError()

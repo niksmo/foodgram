@@ -17,11 +17,6 @@ class TagAdmin(admin.ModelAdmin):
     list_display = ('name', 'slug')
 
 
-class RecipeTagInLine(admin.TabularInline):
-    model = Recipe.tags.through
-    min_num = 1
-
-
 class RecipeIngredientInLine(admin.TabularInline):
     model = RecipeIngredient
     min_num = 1
@@ -35,11 +30,12 @@ class RecipeAdmin(admin.ModelAdmin):
     readonly_fields = ('n_favorites',)
     search_fields = ('name', 'author__username')
     list_filter = ('tags',)
-    inlines = (RecipeTagInLine, RecipeIngredientInLine)
+    inlines = (RecipeIngredientInLine,)
 
     fieldsets = (
         (None,
-         {'fields': ('name', 'text', 'image', 'cooking_time', 'author')}),
+            {'fields': ('name', 'text', 'image',
+                        'cooking_time', 'author', 'tags')}),
 
         ('Статистика',
          {'fields': ('n_favorites',)}),

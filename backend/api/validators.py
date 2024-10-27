@@ -6,11 +6,6 @@ from rest_framework.exceptions import ValidationError
 from foodgram.models import Ingredient
 
 
-def empty_image_validator(value) -> None:
-    if not value:
-        raise ValidationError('Это поле не может быть пустым.')
-
-
 class RecipeCreateUpdateValidator:
     """
     A class for verifying:

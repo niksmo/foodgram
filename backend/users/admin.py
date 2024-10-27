@@ -15,7 +15,6 @@ class UserAdmin(admin.UserAdmin):
         'last_name',
         'email',
         'avatar',
-        'last_login',
         'date_joined',
         'n_users_recipes',
         'n_subscribers'
@@ -41,7 +40,7 @@ class UserAdmin(admin.UserAdmin):
 
     @admin_site.display(description='подписчиков')
     def n_subscribers(self, obj: User) -> int:
-        return obj.author_subscribers__count
+        return obj.subscribers__count
 
     @admin_site.display(description='рецептов')
     def n_users_recipes(self, obj: User) -> int:
@@ -49,7 +48,7 @@ class UserAdmin(admin.UserAdmin):
 
     def get_queryset(self, request: HttpRequest) -> QuerySet:
         return super().get_queryset(request).annotate(
-            Count('author_subscribers'), Count('recipes')
+            Count('subscribers'), Count('recipes')
         )
 
 

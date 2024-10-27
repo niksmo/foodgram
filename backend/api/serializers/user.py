@@ -37,7 +37,7 @@ class UserReadSerializer(serializers.ModelSerializer):
         if not hasattr(self, '_subs_authors_id'):
             self._subs_authors_id = {
                 sub.author_id for sub
-                in request.user.users_subscriptions.all()
+                in request.user.subscriptions.all()
             }
 
         return author.pk in self._subs_authors_id
