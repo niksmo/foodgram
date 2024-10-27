@@ -3,13 +3,16 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = getenv('SECRET_KEY', 'django_sercret_key')
+# SECRET_KEY = getenv('SECRET_KEY', 'django_sercret_key')
+SECRET_KEY = 'django_sercret_key'
 
-DEBUG = getenv('DEBUG', 'False').title() == 'True'
+# DEBUG = getenv('DEBUG', 'False').title() == 'True'
+DEBUG = True
 
-ALLOWED_HOSTS = getenv('ALLOWED_HOSTS', '127.0.0.1').split()
+# ALLOWED_HOSTS = getenv('ALLOWED_HOSTS', '127.0.0.1').split()
+ALLOWED_HOSTS = ['127.0.0.1']
 
-CSRF_TRUSTED_ORIGINS = getenv('CSRF_TRUSTED_ORIGINS', '').split()
+# CSRF_TRUSTED_ORIGINS = getenv('CSRF_TRUSTED_ORIGINS', '').split()
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -59,17 +62,24 @@ WSGI_APPLICATION = 'project_foodgram.wsgi.application'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-AUTH_USER_MODEL = "users.MyUser"
+AUTH_USER_MODEL = "users.User"
 
 
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': getenv('POSTGRES_DB', 'django'),
-        'USER': getenv('POSTGRES_USER', 'django'),
-        'PASSWORD': getenv('POSTGRES_PASSWORD', ''),
-        'HOST': getenv('DB_HOST', '127.0.0.1'),
-        'PORT': getenv('DB_PORT', 5432),
+        # 'NAME': getenv('POSTGRES_DB', 'django'),
+        # 'USER': getenv('POSTGRES_USER', 'django'),
+        # 'PASSWORD': getenv('POSTGRES_PASSWORD', ''),
+        # 'HOST': getenv('DB_HOST', '127.0.0.1'),
+        # 'PORT': getenv('DB_PORT', 5432),
+        'NAME': 'foodgram',
+        'USER': 'postgres',
+        'PASSWORD': 'postgres',
+        'HOST': '127.0.0.1',
+        'PORT': 5432,
+
+
     }
 }
 
@@ -109,22 +119,10 @@ DJOSER = {
     'HIDE_USERS': False,
     'SERIALIZERS': {
         'user': 'api.serializers.UserReadSerializer',
-        'user_create': 'api.serializers.UserCreateSerializer',
-        'current_user': 'api.serializers.UserReadSerializer',
+        'current_user': 'api.serializers.UserReadSerializer'
     },
     'PERMISSIONS': {
         'user': ['rest_framework.permissions.AllowAny'],
-        'user_list': ['rest_framework.permissions.AllowAny'],
-        'user_create': ['rest_framework.permissions.AllowAny'],
-        'set_password': ['djoser.permissions.CurrentUserOrAdmin'],
-        'token_create': ['rest_framework.permissions.AllowAny'],
-        'token_destroy': ['rest_framework.permissions.IsAuthenticated'],
-        'activation': ['api.permissions.NotAllowAny'],
-        'password_reset': ['api.permissions.NotAllowAny'],
-        'password_reset_confirm': ['api.permissions.NotAllowAny'],
-        'username_reset': ['api.permissions.NotAllowAny'],
-        'username_reset_confirm': ['api.permissions.NotAllowAny'],
-        'set_username': ['api.permissions.NotAllowAny'],
-        'user_delete': ['api.permissions.NotAllowAny'],
+        'user_list': ['rest_framework.permissions.AllowAny']
     },
 }

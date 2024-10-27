@@ -5,8 +5,7 @@ from .recipe import (RecipeCreateSerializer, RecipeReadSerializer,
 from .shopping_cart import ShoppingCartSerializer
 from .subscription import SubscriptionSerializer
 from .tag import TagSerializer
-from .user import (UserAvatarSerializer, UserCreateSerializer,
-                   UserReadSerializer)
+from .user import UserAvatarSerializer, UserReadSerializer
 
 __all__ = (
     'FavoriteSerializer',
@@ -18,6 +17,5 @@ __all__ = (
     'SubscriptionSerializer',
     'TagSerializer',
     'UserAvatarSerializer',
-    'UserCreateSerializer',
     'UserReadSerializer',
 )

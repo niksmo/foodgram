@@ -1,13 +1,19 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
-from core.const import MAX_EMAIL_LENGTH
+from core.const import MAX_EMAIL_LENGTH, MAX_USER_FIRST_LAST_NAME_LENGTH
 from core.factories import make_model_str
 
 
 class User(AbstractUser):
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS: tuple[str, ...] = ('username', 'first_name', 'last_name')
+
+    first_name = models.CharField('Имя',
+                                  max_length=MAX_USER_FIRST_LAST_NAME_LENGTH)
+
+    last_name = models.CharField('Фамилия',
+                                 max_length=MAX_USER_FIRST_LAST_NAME_LENGTH)
 
     email = models.EmailField('Электронная почта', unique=True,
                               max_length=MAX_EMAIL_LENGTH)
@@ -32,7 +38,7 @@ class Subscription(models.Model):
 
     author = models.ForeignKey(
         User, on_delete=models.CASCADE,
-        related_name='subscribers',
+        related_name='subscriptions_on_author',
         verbose_name='автор'
     )
 
