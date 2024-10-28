@@ -1,7 +1,7 @@
 from typing import Type
 
 from django.contrib.auth import get_user_model
-from django.db.models import Count, F, Model, Sum
+from django.db.models import Count, Exists, F, Model, OuterRef, Sum, Value
 from django.http.response import FileResponse, HttpResponseBase
 from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet as DjoserUserViewSet
@@ -131,7 +131,12 @@ class RecipeViewSet(viewsets.ModelViewSet):
     lookup_value_regex = LOOKUP_DIGIT_PATTERN
     queryset = models.Recipe.objects.select_related(
         'author'
-    ).prefetch_related('tags')
+    ).prefetch_related(
+        'tags'
+    ).annotate(
+        is_favorited=Value(False),
+        is_in_shopping_cart=Value(False)
+    )
     serializer_class = RecipeReadSerializer
     filterset_class = RecipeListFilter
     permission_classes = [IsAuthenticatedOrReadOnly,
@@ -141,6 +146,24 @@ class RecipeViewSet(viewsets.ModelViewSet):
         if self.action == 'create' or self.action == 'partial_update':
             return RecipeCreateUpdateSerializer
         return super().get_serializer_class()
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        if not self.request.auth:
+            return queryset
+
+        return queryset.annotate(
+            is_favorited=Exists(
+                models.Favorite.objects.filter(
+                    recipe=OuterRef('pk'), user=self.request.user
+                )
+            ),
+            is_in_shopping_cart=Exists(
+                models.ShoppingCart.objects.filter(
+                    recipe=OuterRef('pk'), user=self.request.user
+                )
+            )
+        )
 
     @action([HttpMethod.GET], detail=True,
             serializer_class=ShortLinkSerializer, url_path='get-link')

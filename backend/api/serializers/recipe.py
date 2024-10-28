@@ -2,18 +2,17 @@ from secrets import token_urlsafe
 from typing import Any, Iterable
 
 from django.contrib.auth import get_user_model
-from django.db.models import Manager
+from django.db.models import Exists, Manager, OuterRef
 from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from rest_framework.request import Request
 
 from api.serializers.tag import TagSerializer
 from api.serializers.user import UserReadSerializer
 from core.const import (MIN_AMOUNT_VALUE, SHORT_LINK_SLUG_NBYTES,
                         SMALL_INTEGER_FIELD_MAX_VALUE)
-from foodgram.models import (Ingredient, Recipe, RecipeIngredient,
-                             RecipeShortLink, Tag)
+from foodgram.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
+                             RecipeShortLink, ShoppingCart, Tag)
 
 User = get_user_model()
 
@@ -56,40 +55,12 @@ class RecipeReadSerializer(serializers.ModelSerializer):
                                            many=True)
     author = UserReadSerializer()
 
-    is_favorited = serializers.SerializerMethodField()
-    is_in_shopping_cart = serializers.SerializerMethodField()
+    is_favorited = serializers.BooleanField()
+    is_in_shopping_cart = serializers.BooleanField()
 
     class Meta:
         model = Recipe
         exclude = ('created_at',)
-
-    def get_is_favorited(self, obj: Recipe) -> bool:
-        if 'request' not in self.context:
-            return False
-
-        request: Request = self.context['request']
-        if not request.auth:
-            return False
-
-        if not hasattr(self, '_user_favorited'):
-            self._user_favorited = {favorite.recipe_id for favorite
-                                    in request.user.favorite_set.all()}
-
-        return obj.pk in self._user_favorited
-
-    def get_is_in_shopping_cart(self, obj: Recipe) -> bool:
-        if 'request' not in self.context:
-            return False
-
-        request: Request = self.context['request']
-        if not request.auth:
-            return False
-
-        if not hasattr(self, '_user_shopping_cart'):
-            self._user_shopping_cart = {item.recipe_id for item
-                                        in request.user.shoppingcart_set.all()}
-
-        return obj.pk in self._user_shopping_cart
 
 
 class IngredientCreateUpdateSerializer(serializers.Serializer):
@@ -145,7 +116,24 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
         return attrs
 
     def to_representation(self, instance):
-        return RecipeReadSerializer(instance, context=self.context).data
+        user = self.context['request'].user
+        return RecipeReadSerializer(
+            Recipe.objects.select_related(
+                'author'
+            ).prefetch_related(
+                'tags'
+            ).annotate(
+                is_favorited=Exists(Favorite.objects.filter(
+                    recipe=OuterRef('pk'),
+                    user=user
+                )),
+                is_in_shopping_cart=Exists(ShoppingCart.objects.filter(
+                    recipe=OuterRef('pk'),
+                    user=user
+                ))
+            ).get(pk=instance.pk),
+            context=self.context
+        ).data
 
     def create(self, validated_data: dict[str, Any]) -> Recipe:
         ingredients = validated_data.pop('ingredients')
