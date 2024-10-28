@@ -1,4 +1,3 @@
-from secrets import token_urlsafe
 from typing import Type
 
 from django.contrib.auth import get_user_model
@@ -20,10 +19,9 @@ from api.permissions import IsAuthorAdminOrReadOnly
 from api.serializers import (FavoriteSerializer, IngredientSerializer,
                              RecipeCreateSerializer, RecipeReadSerializer,
                              RecipeUpdateSerializer, ShoppingCartSerializer,
-                             SubscriptionSerializer, TagSerializer,
-                             UserAvatarSerializer)
-from core.const import (LOOKUP_DIGIT_PATTERN, SHORT_LINK_SLUG_NBYTES,
-                        SHORT_LINK_URL_PATH, HttpMethod)
+                             ShortLinkSerializer, SubscriptionSerializer,
+                             TagSerializer, UserAvatarSerializer)
+from core.const import LOOKUP_DIGIT_PATTERN, SHORT_LINK_URL_PATH, HttpMethod
 from core.factories import make_shopping_list
 from foodgram import models
 from users.models import Subscription
@@ -46,15 +44,18 @@ class UserViewSet(DjoserUserViewSet):
     @action([HttpMethod.GET], detail=False,
             permission_classes=[IsAuthenticated])
     def me(self, request: Request) -> Response:
-        self.get_object = self.get_instance
-        return self.retrieve(request)
+        return Response(
+            self.get_serializer(request.user).data, status=status.HTTP_200_OK
+        )
 
     @action([HttpMethod.PUT], url_path='me/avatar',
             detail=False, serializer_class=UserAvatarSerializer,
             permission_classes=[IsAuthenticated])
     def avatar(self, request: Request) -> Response:
-        self.get_object = self.get_instance
-        return self.update(request)
+        serializer = self.get_serializer(request.user, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     @avatar.mapping.delete
     def delete_avatar(self, request: Request) -> Response:
@@ -76,14 +77,9 @@ class UserViewSet(DjoserUserViewSet):
             serializer_class=SubscriptionSerializer,
             permission_classes=[IsAuthenticated])
     def subscribe(self, request: Request, id: str) -> Response:
-        author = get_object_or_404(
-            User.objects.annotate(recipes_count=Count('recipes')),
-            pk=id
-        )
-        serializer = self.get_serializer(data={'author_id': author.pk,
-                                               'user_id': request.user.id})
+        serializer = self.get_serializer(data={'author': id})
         serializer.is_valid(raise_exception=True)
-        serializer.save(author=author)
+        serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     @subscribe.mapping.delete
@@ -146,10 +142,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
             return RecipeCreateSerializer
         elif self.action == 'partial_update':
             return RecipeUpdateSerializer
-        elif self.action == 'favorite':
-            return FavoriteSerializer
-        elif self.action == 'shopping_cart':
-            return ShoppingCartSerializer
         return super().get_serializer_class()
 
     def perform_create(self, serializer: ModelSerializer) -> None:
@@ -159,21 +151,17 @@ class RecipeViewSet(viewsets.ModelViewSet):
         kwargs.pop('partial')
         return super().update(request, *args, **kwargs)
 
-    def _make_short_link_slug(self, nbytes: int) -> str:
-        while True:
-            token = token_urlsafe(nbytes)
-            if not models.RecipeShortLink.objects.filter(token=token).exists():
-                break
-        return token
-
-    @action([HttpMethod.GET], detail=True, url_path='get-link')
+    @action([HttpMethod.GET], detail=True,
+            serializer_class=ShortLinkSerializer, url_path='get-link')
     def get_link(self, request: Request, recipe_id: str) -> Response:
-        recipe = get_object_or_404(models.Recipe.objects, pk=recipe_id)
+        serializer = self.get_serializer(data={'recipe': recipe_id})
+        serializer.is_valid(raise_exception=True)
+        recipe = serializer.validated_data['recipe']
         try:
             slug = recipe.link_slug.slug
         except models.RecipeShortLink.DoesNotExist:
-            slug = self._make_short_link_slug(SHORT_LINK_SLUG_NBYTES)
-            models.RecipeShortLink.objects.create(recipe=recipe, slug=slug)
+            serializer.save()
+            slug = serializer.instance.slug
 
         return Response(
             {'short-link': request.build_absolute_uri(
@@ -203,8 +191,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return self._delete_fav_shop(request, recipe_id, models.ShoppingCart)
 
     def _add_fav_shop(self, request: Request, recipe_id: str) -> Response:
-        serializer = self.get_serializer(data={'user_id': request.user.id,
-                                               'recipe_id': recipe_id})
+        serializer = self.get_serializer(data={'recipe': recipe_id})
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)

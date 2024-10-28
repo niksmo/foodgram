@@ -30,9 +30,8 @@ class UserReadSerializer(UserSerializer):
         return author.pk in self._subs_authors_id
 
 
-class UserAvatarSerializer(serializers.ModelSerializer):
+class UserAvatarSerializer(UserSerializer):
     avatar = Base64ImageField()
 
-    class Meta:
-        model = User
+    class Meta(UserSerializer.Meta):
         fields = ('avatar',)

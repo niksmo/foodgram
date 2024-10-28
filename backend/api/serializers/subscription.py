@@ -1,6 +1,7 @@
 from typing import Union
 
 from django.contrib.auth import get_user_model
+from django.db.models import Count
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.request import Request
@@ -15,36 +16,34 @@ User = get_user_model()
 
 
 class SubscriptionSerializer(UserReadSerializer):
-    user_id = serializers.IntegerField(write_only=True)
-    author_id = serializers.IntegerField(write_only=True)
-    recipes = serializers.SerializerMethodField()
+    author = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.annotate(recipes_count=Count('recipes')),
+        write_only=True
+    )
+    recipes = serializers.SerializerMethodField(read_only=True)
     recipes_count = serializers.IntegerField(read_only=True)
     is_subscribed = serializers.ReadOnlyField(default=True)
 
     class Meta(UserReadSerializer.Meta):
         fields = (
             UserReadSerializer.Meta.fields
-            + ('is_subscribed', 'recipes', 'recipes_count',
-                'user_id', 'author_id')
+            + ('is_subscribed', 'recipes', 'recipes_count', 'author')
         )
         read_only_fields = ('username', 'first_name',
                             'last_name', 'email', 'avatar')
 
     def validate(self, data):
-        user_id = data['user_id']
-        author_id = data['author_id']
-        if user_id == author_id:
+        user = self.context['request'].user
+        author = data['author']
+        if user == author:
             raise ValidationError('Пользователь и автор совпадают.')
 
-        if Subscription.objects.filter(
-                user_id=user_id,
-                author_id=author_id
-        ).exists():
+        if Subscription.objects.filter(user=user, author=author).exists():
             raise ValidationError('Повторная подписка.')
         return data
 
-    def get_recipes(self, author: UserType) -> Union[ReturnList, ReturnDict]:
-        recipes_qs = author.recipes.all()
+    def get_recipes(self, instance: UserType) -> Union[ReturnList, ReturnDict]:
+        recipes_qs = instance.recipes.all()
         request: Request = self.context['request']
 
         if ('recipes_limit' in request.query_params
@@ -58,7 +57,8 @@ class SubscriptionSerializer(UserReadSerializer):
                                           many=True,
                                           context=self.context).data
 
-    def create(self, validated_data):
-        Subscription.objects.create(user_id=validated_data['user_id'],
-                                    author_id=validated_data['author_id'])
-        return validated_data['author']
+    def create(self, validated_data) -> UserType:
+        author = validated_data['author']
+        Subscription.objects.create(user=self.context['request'].user,
+                                    author=author)
+        return author

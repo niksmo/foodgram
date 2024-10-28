@@ -1,3 +1,4 @@
+from secrets import token_urlsafe
 from typing import Any, NoReturn
 
 from django.contrib.auth import get_user_model
@@ -10,7 +11,7 @@ from rest_framework.request import Request
 from api.serializers.tag import TagSerializer
 from api.serializers.user import UserReadSerializer
 from api.validators import RecipeCreateUpdateValidator
-from core.const import SMALL_INTEGER_FIELD_MAX_VALUE
+from core.const import SHORT_LINK_SLUG_NBYTES, SMALL_INTEGER_FIELD_MAX_VALUE
 from foodgram import models
 
 User = get_user_model()
@@ -152,3 +153,23 @@ class RecipeUpdateSerializer(RecipeCreateSerializer):
         self._set_ingredients(recipe, ingredients)
 
         return recipe
+
+
+class ShortLinkSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = models.RecipeShortLink
+        fields = '__all__'
+        read_only_fields = ('slug',)
+        extra_kwargs = {
+            'recipe': {'write_only': True}
+        }
+
+    def create(self, validated_data):
+        while True:
+            slug = token_urlsafe(SHORT_LINK_SLUG_NBYTES)
+            if not models.RecipeShortLink.objects.filter(slug=slug).exists():
+                break
+        return models.RecipeShortLink.objects.create(
+            recipe=validated_data['recipe'],
+            slug=slug
+        )

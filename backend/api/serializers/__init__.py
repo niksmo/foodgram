@@ -1,7 +1,7 @@
 from .favorite import FavoriteSerializer
 from .ingredient import IngredientSerializer
 from .recipe import (RecipeCreateSerializer, RecipeReadSerializer,
-                     RecipeUpdateSerializer)
+                     RecipeUpdateSerializer, ShortLinkSerializer)
 from .shopping_cart import ShoppingCartSerializer
 from .subscription import SubscriptionSerializer
 from .tag import TagSerializer
@@ -14,6 +14,7 @@ __all__ = (
     'RecipeReadSerializer',
     'RecipeUpdateSerializer',
     'ShoppingCartSerializer',
+    'ShortLinkSerializer',
     'SubscriptionSerializer',
     'TagSerializer',
     'UserAvatarSerializer',
