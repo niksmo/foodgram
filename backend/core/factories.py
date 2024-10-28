@@ -1,5 +1,5 @@
-from typing import Any
 from collections.abc import Iterable
+from typing import Any
 
 from .const import (DEFAULT_MODEL_ADMIN_NAME_LENGTH,
                     DEFAULT_MODEL_ADMIN_NAME_SUFFIX)

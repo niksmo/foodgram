@@ -10,7 +10,8 @@ from rest_framework.request import Request
 
 from api.serializers.tag import TagSerializer
 from api.serializers.user import UserReadSerializer
-from core.const import SHORT_LINK_SLUG_NBYTES, SMALL_INTEGER_FIELD_MAX_VALUE
+from core.const import (MIN_AMOUNT_VALUE, SHORT_LINK_SLUG_NBYTES,
+                        SMALL_INTEGER_FIELD_MAX_VALUE)
 from foodgram.models import (Ingredient, Recipe, RecipeIngredient,
                              RecipeShortLink, Tag)
 
@@ -96,7 +97,7 @@ class IngredientCreateUpdateSerializer(serializers.Serializer):
         queryset=Ingredient.objects
     )
 
-    amount = serializers.IntegerField(min_value=1,
+    amount = serializers.IntegerField(min_value=MIN_AMOUNT_VALUE,
                                       max_value=SMALL_INTEGER_FIELD_MAX_VALUE)
 
 
