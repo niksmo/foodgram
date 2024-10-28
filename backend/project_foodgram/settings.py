@@ -59,7 +59,7 @@ WSGI_APPLICATION = 'project_foodgram.wsgi.application'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-AUTH_USER_MODEL = "users.MyUser"
+AUTH_USER_MODEL = "users.User"
 
 
 DATABASES = {
@@ -109,22 +109,10 @@ DJOSER = {
     'HIDE_USERS': False,
     'SERIALIZERS': {
         'user': 'api.serializers.UserReadSerializer',
-        'user_create': 'api.serializers.UserCreateSerializer',
-        'current_user': 'api.serializers.UserReadSerializer',
+        'current_user': 'api.serializers.UserReadSerializer'
     },
     'PERMISSIONS': {
         'user': ['rest_framework.permissions.AllowAny'],
-        'user_list': ['rest_framework.permissions.AllowAny'],
-        'user_create': ['rest_framework.permissions.AllowAny'],
-        'set_password': ['djoser.permissions.CurrentUserOrAdmin'],
-        'token_create': ['rest_framework.permissions.AllowAny'],
-        'token_destroy': ['rest_framework.permissions.IsAuthenticated'],
-        'activation': ['api.permissions.NotAllowAny'],
-        'password_reset': ['api.permissions.NotAllowAny'],
-        'password_reset_confirm': ['api.permissions.NotAllowAny'],
-        'username_reset': ['api.permissions.NotAllowAny'],
-        'username_reset_confirm': ['api.permissions.NotAllowAny'],
-        'set_username': ['api.permissions.NotAllowAny'],
-        'user_delete': ['api.permissions.NotAllowAny'],
+        'user_list': ['rest_framework.permissions.AllowAny']
     },
 }

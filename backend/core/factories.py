@@ -1,10 +1,13 @@
+from typing import Any
+from collections.abc import Iterable
+
 from .const import (DEFAULT_MODEL_ADMIN_NAME_LENGTH,
                     DEFAULT_MODEL_ADMIN_NAME_SUFFIX)
 
 
-def get_model_admin_name(field: str,
-                         max_length: int = DEFAULT_MODEL_ADMIN_NAME_LENGTH,
-                         suffix: str = DEFAULT_MODEL_ADMIN_NAME_SUFFIX):
+def make_model_str(field: str,
+                   max_length: int = DEFAULT_MODEL_ADMIN_NAME_LENGTH,
+                   suffix: str = DEFAULT_MODEL_ADMIN_NAME_SUFFIX) -> str:
     assert isinstance(field, str) and len(field) > 0, (
         '`field` length should more then `0`'
     )
@@ -20,3 +23,9 @@ def get_model_admin_name(field: str,
 
     return (f'{field[:max_length - len(suffix)] }'
             f'{suffix}')
+
+
+def make_shopping_list(ingredients: Iterable[dict[str, Any]]) -> str:
+    return '\n'.join(((f'{item["name"]} — '
+                       f'{item["amount"]} {item["unit"]}')
+                      for item in ingredients))

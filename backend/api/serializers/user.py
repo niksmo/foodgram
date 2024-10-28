@@ -1,34 +1,21 @@
-import djoser.serializers as djoser_serializers
 from django.contrib.auth import get_user_model
+from djoser.serializers import UserSerializer
 from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
 from rest_framework.request import Request
 
-from users.models import MyUser
+from users.models import User as UserType
 
 User = get_user_model()
 
 
-class UserCreateSerializer(djoser_serializers.UserCreateSerializer):
-    class Meta(djoser_serializers.UserCreateSerializer.Meta):
-        extra_kwargs = {
-            'first_name': {'required': True},
-            'last_name': {'required': True}
-        }
-
-
-class UserReadSerializer(serializers.ModelSerializer):
+class UserReadSerializer(UserSerializer):
     is_subscribed = serializers.SerializerMethodField()
 
-    class Meta:
-        model = User
-        fields = ('id', 'username', 'first_name', 'last_name',
-                  'email', 'is_subscribed', 'avatar')
-        read_only_fields = ('id', 'is_subscribed', 'avatar')
+    class Meta(UserSerializer.Meta):
+        fields = UserSerializer.Meta.fields + ('is_subscribed', 'avatar')
 
-    def get_is_subscribed(self, author: MyUser) -> bool:
-        if 'request' not in self.context:
-            return False
+    def get_is_subscribed(self, author: UserType) -> bool:
 
         request: Request = self.context['request']
         if not request.auth or request.user == author:
@@ -37,15 +24,14 @@ class UserReadSerializer(serializers.ModelSerializer):
         if not hasattr(self, '_subs_authors_id'):
             self._subs_authors_id = {
                 sub.author_id for sub
-                in request.user.subscriptions_set.all()
+                in request.user.subscriptions.all()
             }
 
         return author.pk in self._subs_authors_id
 
 
-class UserAvatarSerializer(serializers.ModelSerializer):
+class UserAvatarSerializer(UserSerializer):
     avatar = Base64ImageField()
 
-    class Meta:
-        model = User
+    class Meta(UserSerializer.Meta):
         fields = ('avatar',)
