@@ -7,7 +7,6 @@ from foodgram.models import Recipe
 
 
 class CommonRecipeReadSerializer(serializers.ModelSerializer):
-    # RETURN AFTER RECIPE
     class Meta:
         model = Recipe
         fields = ('id', 'name', 'image', 'cooking_time')

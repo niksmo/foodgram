@@ -12,13 +12,13 @@ from rest_framework.permissions import (IsAuthenticated,
                                         IsAuthenticatedOrReadOnly)
 from rest_framework.request import Request
 from rest_framework.response import Response
-from rest_framework.serializers import BaseSerializer, ModelSerializer
+from rest_framework.serializers import BaseSerializer
 
 from api.filters import IngredientListFilter, RecipeListFilter
 from api.permissions import IsAuthorAdminOrReadOnly
 from api.serializers import (FavoriteSerializer, IngredientSerializer,
-                             RecipeCreateSerializer, RecipeReadSerializer,
-                             RecipeUpdateSerializer, ShoppingCartSerializer,
+                             RecipeCreateUpdateSerializer,
+                             RecipeReadSerializer, ShoppingCartSerializer,
                              ShortLinkSerializer, SubscriptionSerializer,
                              TagSerializer, UserAvatarSerializer)
 from core.const import LOOKUP_DIGIT_PATTERN, SHORT_LINK_URL_PATH, HttpMethod
@@ -138,18 +138,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
                           IsAuthorAdminOrReadOnly]
 
     def get_serializer_class(self) -> Type[BaseSerializer]:
-        if self.action == 'create':
-            return RecipeCreateSerializer
-        elif self.action == 'partial_update':
-            return RecipeUpdateSerializer
+        if self.action == 'create' or self.action == 'partial_update':
+            return RecipeCreateUpdateSerializer
         return super().get_serializer_class()
-
-    def perform_create(self, serializer: ModelSerializer) -> None:
-        serializer.save(author=self.request.user)
-
-    def update(self, request, *args, **kwargs):
-        kwargs.pop('partial')
-        return super().update(request, *args, **kwargs)
 
     @action([HttpMethod.GET], detail=True,
             serializer_class=ShortLinkSerializer, url_path='get-link')

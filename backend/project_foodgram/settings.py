@@ -3,16 +3,13 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# SECRET_KEY = getenv('SECRET_KEY', 'django_sercret_key')
-SECRET_KEY = 'django_sercret_key'
+SECRET_KEY = getenv('SECRET_KEY', 'django_sercret_key')
 
-# DEBUG = getenv('DEBUG', 'False').title() == 'True'
-DEBUG = True
+DEBUG = getenv('DEBUG', 'False').title() == 'True'
 
-# ALLOWED_HOSTS = getenv('ALLOWED_HOSTS', '127.0.0.1').split()
-ALLOWED_HOSTS = ['127.0.0.1']
+ALLOWED_HOSTS = getenv('ALLOWED_HOSTS', '127.0.0.1').split()
 
-# CSRF_TRUSTED_ORIGINS = getenv('CSRF_TRUSTED_ORIGINS', '').split()
+CSRF_TRUSTED_ORIGINS = getenv('CSRF_TRUSTED_ORIGINS', '').split()
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -68,18 +65,11 @@ AUTH_USER_MODEL = "users.User"
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        # 'NAME': getenv('POSTGRES_DB', 'django'),
-        # 'USER': getenv('POSTGRES_USER', 'django'),
-        # 'PASSWORD': getenv('POSTGRES_PASSWORD', ''),
-        # 'HOST': getenv('DB_HOST', '127.0.0.1'),
-        # 'PORT': getenv('DB_PORT', 5432),
-        'NAME': 'foodgram',
-        'USER': 'postgres',
-        'PASSWORD': 'postgres',
-        'HOST': '127.0.0.1',
-        'PORT': 5432,
-
-
+        'NAME': getenv('POSTGRES_DB', 'django'),
+        'USER': getenv('POSTGRES_USER', 'django'),
+        'PASSWORD': getenv('POSTGRES_PASSWORD', ''),
+        'HOST': getenv('DB_HOST', '127.0.0.1'),
+        'PORT': getenv('DB_PORT', 5432),
     }
 }
 
