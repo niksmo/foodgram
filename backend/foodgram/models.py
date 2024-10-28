@@ -97,7 +97,7 @@ class RecipeIngredient(models.Model):
 
     amount = models.PositiveSmallIntegerField(
         'количество',
-        validators=(MinValueValidator(limit_value=1),)
+        validators=(MinValueValidator(limit_value=const.MIN_AMOUNT_VALUE),)
     )
 
     class Meta:
