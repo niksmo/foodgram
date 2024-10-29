@@ -206,10 +206,14 @@ class RecipeViewSet(viewsets.ModelViewSet):
             user=request.user, recipe_id=recipe_id
         ).delete()
 
-        if not n_removed:
-            raise ValidationError({self.action: 'Рецепт не был добавлен.'})
-
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(
+            data=None if n_removed else {
+                'detail': ('Рецепт не был добавлен в '
+                           f'`{model._meta.verbose_name.title()}`.')
+            },
+            status=(status.HTTP_204_NO_CONTENT if n_removed
+                    else status.HTTP_400_BAD_REQUEST)
+        )
 
     @action((HttpMethod.GET,), detail=False,
             permission_classes=(IsAuthenticated,))

@@ -13,26 +13,23 @@ class CommonRecipeReadSerializer(serializers.ModelSerializer):
 
 
 class CommonFavoriteShopCartSerializer(serializers.ModelSerializer):
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+
     class Meta:
-        fields = ('recipe',)
-        extra_kwargs = {
-            'recipe': {'write_only': True}
-        }
+        fields = ('recipe', 'user')
+        validators = tuple()
 
     def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
         if self.Meta.model.objects.filter(
-            user=self.context['request'].user,
+            user=attrs['user'],
             recipe=attrs['recipe']
         ).exists():
-            raise ValidationError('Рецепт уже добавлен.')
+            raise ValidationError(
+                'Рецепт уже добавлен в '
+                f'`{self.Meta.model._meta.verbose_name.title()}`.'
+            )
 
         return attrs
-
-    def create(self, validated_data):
-        return self.Meta.model.objects.create(
-            user=self.context['request'].user,
-            recipe=validated_data['recipe']
-        )
 
     def to_representation(self, instance):
         return CommonRecipeReadSerializer(instance.recipe,
