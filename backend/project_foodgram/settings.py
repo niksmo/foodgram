@@ -1,15 +1,19 @@
 from os import getenv
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = getenv('SECRET_KEY', 'django_sercret_key')
+load_dotenv(BASE_DIR.parent / '.env')
 
-DEBUG = getenv('DEBUG', 'False').title() == 'True'
+SECRET_KEY = getenv('DJANGO_SECRET_KEY', 'django_sercret_key')
 
-ALLOWED_HOSTS = getenv('ALLOWED_HOSTS', '127.0.0.1').split()
+DEBUG = getenv('DJANGO_DEBUG', 'False').title() == 'True'
 
-CSRF_TRUSTED_ORIGINS = getenv('CSRF_TRUSTED_ORIGINS', '').split()
+ALLOWED_HOSTS = getenv('DJANGO_ALLOWED_HOSTS', '127.0.0.1').split()
+
+CSRF_TRUSTED_ORIGINS = getenv('DJANGO_CSRF_TRUSTED_ORIGINS', '').split()
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -64,12 +68,12 @@ AUTH_USER_MODEL = "users.User"
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': getenv('POSTGRES_DB', 'django'),
-        'USER': getenv('POSTGRES_USER', 'django'),
-        'PASSWORD': getenv('POSTGRES_PASSWORD', ''),
-        'HOST': getenv('DB_HOST', '127.0.0.1'),
-        'PORT': getenv('DB_PORT', 5432),
+        'ENGINE': 'django.db.backends.sqlite3' if DEBUG else 'django.db.backends.postgresql',
+        'NAME': BASE_DIR / 'db.sqlite3' if DEBUG else getenv('POSTGRES_DB', 'postgres'),
+        'USER': getenv('POSTGRES_USER', 'postgres'),
+        'PASSWORD': getenv('POSTGRES_PASSWORD', 'postgres'),
+        'HOST': getenv('POSTGRES_HOST', '127.0.0.1'),
+        'PORT': getenv('POSTGRES_PORT', 5432)
     }
 }
 
@@ -102,7 +106,7 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': ('rest_framework.permissions.AllowAny',),
     'DEFAULT_FILTER_BACKENDS': ('django_filters.rest_framework.DjangoFilterBackend',),
     'DEFAULT_PAGINATION_CLASS': 'api.pagination.PageNumberPagination',
-    'PAGE_SIZE': 10,
+    'PAGE_SIZE': 6,
 }
 
 DJOSER = {

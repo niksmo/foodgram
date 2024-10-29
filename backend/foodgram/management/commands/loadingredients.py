@@ -25,17 +25,16 @@ class Command(BaseCommand):
         try:
             data = json.loads(self.path.read_text())
         except json.JSONDecodeError as exc:
-            raise CommandError(f'Json is broken: {exc!r}')
+            raise CommandError(f'JSON is broken: {exc!r}')
 
         if not isinstance(data, list):
             raise CommandError('Expected data type is list.')
 
-        for item in data:
-            try:
-                Ingredient.objects.create(**item)
-            except Exception as exc:
-                self.stdout.write(self.style.NOTICE(f'{exc!r}'))
-            else:
-                self.stdout.write(
-                    self.style.SUCCESS(f'Insert ingredient: {item}')
-                )
+        inserted = Ingredient.objects.bulk_create(
+            (Ingredient(**item) for item in data),
+            ignore_conflicts=True
+        )
+
+        self.stdout.write(
+            self.style.SUCCESS(f'Insert {len(inserted)} ingredients.')
+        )

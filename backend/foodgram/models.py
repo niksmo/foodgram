@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from django.core.validators import MinValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 from core import const, factories
@@ -61,6 +61,7 @@ class Recipe(models.Model):
         help_text='минут',
         validators=(
             MinValueValidator(limit_value=const.MIN_COOKING_TIME_VALUE),
+            MaxValueValidator(limit_value=const.SMALL_INTEGER_FIELD_MAX_VALUE)
         )
     )
 
@@ -97,7 +98,10 @@ class RecipeIngredient(models.Model):
 
     amount = models.PositiveSmallIntegerField(
         'количество',
-        validators=(MinValueValidator(limit_value=const.MIN_AMOUNT_VALUE),)
+        validators=(
+            MinValueValidator(limit_value=const.MIN_AMOUNT_VALUE),
+            MaxValueValidator(limit_value=const.SMALL_INTEGER_FIELD_MAX_VALUE)
+        )
     )
 
     class Meta:
@@ -123,10 +127,6 @@ class UserRecipeIntermediateAbstract(models.Model):
 
     class Meta:
         abstract = True
-        constraints = (
-            models.UniqueConstraint(fields=('user', 'recipe'),
-                                    name='user_recipe_unique_together'),
-        )
 
     def __str__(self) -> str:
         return factories.make_model_str(
@@ -138,12 +138,24 @@ class Favorite(UserRecipeIntermediateAbstract):
     class Meta:
         verbose_name = 'избранное'
         verbose_name_plural = 'Избранные рецепты'
+        constraints = (
+            models.UniqueConstraint(
+                fields=('user', 'recipe'),
+                name='favorite:user_recipe_unique_together'
+            ),
+        )
 
 
 class ShoppingCart(UserRecipeIntermediateAbstract):
     class Meta:
         verbose_name = 'корзина покупок'
         verbose_name_plural = 'Корзины покупок'
+        constraints = (
+            models.UniqueConstraint(
+                fields=('user', 'recipe'),
+                name='shopping_cart:user_recipe_unique_together'
+            ),
+        )
 
 
 class RecipeShortLink(models.Model):

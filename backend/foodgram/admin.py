@@ -59,7 +59,7 @@ class RecipeAdmin(admin.ModelAdmin):
     def get_queryset(self, request: HttpRequest) -> QuerySet:
         return super().get_queryset(request).prefetch_related(
             'tags', 'ingredients'
-        ).annotate(Count('favorite'))
+        ).annotate(Count('favorite')).order_by('-created_at')
 
 
 @admin.register(Favorite)
