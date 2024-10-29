@@ -1,5 +1,5 @@
 from secrets import token_urlsafe
-from typing import Any, Iterable
+from typing import Any
 
 from django.contrib.auth import get_user_model
 from django.db.models import Exists, Manager, OuterRef
@@ -85,6 +85,8 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
 
     image = Base64ImageField()
 
+    default_error_messages = {'doubles': '{} дублируются.'}
+
     class Meta:
         model = Recipe
         exclude = ('created_at',)
@@ -92,23 +94,26 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
 
     def validate_image(self, value):
         if not value:
-            raise ValidationError('Это поле не может быть пустым.')
+            raise ValidationError(self.error_messages['null'])
         return value
 
     def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
         errors = {}
 
-        self._verify_repetition(
-            'tags',
-            (item.id for item in attrs['tags']),
-            errors
-        )
+        if 'tags' not in attrs:
+            errors.update(tags=[self.error_messages['required']])
+        elif len(attrs['tags']) > len(set(attrs['tags'])):
+            errors.update(tags=[
+                self.default_error_messages['doubles'].format('Теги')
+            ])
 
-        self._verify_repetition(
-            'ingredients',
-            (item['id'].id for item in attrs['ingredients']),
-            errors
-        )
+        if 'ingredients' not in attrs:
+            errors.update(ingredients=[self.error_messages['required']])
+        elif (len(attrs['ingredients'])
+              > len(set(item['id'] for item in attrs['ingredients']))):
+            errors.update(ingredients=[
+                self.default_error_messages['doubles'].format('Ингредиенты')
+            ])
 
         if errors:
             raise ValidationError(errors)
@@ -158,26 +163,6 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
             )
                 for item in ingredients)
         )
-
-    def _verify_repetition(self, field_name: str, ids: Iterable[int],
-                           errors: dict[str, Any]) -> list[int]:
-        doubles_set: set[int] = set()
-        unique_set: set[int] = set()
-        for id in ids:
-            if id in unique_set:
-                doubles_set.add(id)
-            else:
-                unique_set.add(id)
-
-        if doubles_set:
-            errors[field_name] = [
-                {
-                    'id': [
-                        f'{field_name} с ID {sorted(doubles_set)} дублируются.'
-                    ]
-                }
-            ]
-        return sorted(unique_set)
 
 
 class ShortLinkSerializer(serializers.ModelSerializer):
