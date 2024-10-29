@@ -1,6 +1,9 @@
+from typing import Optional
+
 from django.contrib.auth import get_user_model
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.db.models import Exists, OuterRef, Value
 
 from core import const, factories
 
@@ -48,6 +51,68 @@ class Tag(models.Model):
         return factories.make_model_str(self.name)
 
 
+class UserRecipeIntermediateAbstract(models.Model):
+    user = models.ForeignKey(User,
+                             on_delete=models.CASCADE,
+                             verbose_name='пользователь')
+
+    recipe = models.ForeignKey('Recipe',
+                               on_delete=models.CASCADE,
+                               verbose_name=const.VERBOSE_RECIPE_FIELD)
+
+    class Meta:
+        abstract = True
+
+    def __str__(self) -> str:
+        return factories.make_model_str(
+            f'Пользователь-{self._meta.verbose_name} <id: {self.pk}'
+        )
+
+
+class Favorite(UserRecipeIntermediateAbstract):
+    class Meta:
+        verbose_name = 'избранное'
+        verbose_name_plural = 'Избранные рецепты'
+        constraints = (
+            models.UniqueConstraint(
+                fields=('user', 'recipe'),
+                name='favorite:user_recipe_unique_together'
+            ),
+        )
+
+
+class ShoppingCart(UserRecipeIntermediateAbstract):
+    class Meta:
+        verbose_name = 'корзина покупок'
+        verbose_name_plural = 'Корзины покупок'
+        constraints = (
+            models.UniqueConstraint(
+                fields=('user', 'recipe'),
+                name='shopping_cart:user_recipe_unique_together'
+            ),
+        )
+
+
+class RecipeQuerySet(models.QuerySet):
+    def annotate_is_favorited_in_shopping_cart(
+        self, *,
+        user_id: Optional[int] = None
+    ) -> models.QuerySet:
+        is_favorited = Value(False)
+        is_in_shopping_cart = Value(False)
+        if user_id:
+            is_favorited = Exists(
+                Favorite.objects.filter(recipe=OuterRef('pk'),
+                                        user_id=user_id)
+            )
+            is_in_shopping_cart = Exists(
+                ShoppingCart.objects.filter(recipe=OuterRef('pk'),
+                                            user_id=user_id)
+            )
+        return self.annotate(is_favorited=is_favorited,
+                             is_in_shopping_cart=is_in_shopping_cart)
+
+
 class Recipe(models.Model):
     name = models.CharField(const.VERBOSE_NAME_FIELD,
                             max_length=const.MAX_RECIPE_NAME_LENGTH)
@@ -77,6 +142,8 @@ class Recipe(models.Model):
     tags = models.ManyToManyField(Tag, verbose_name='теги')
 
     created_at = models.DateTimeField('создан', auto_now_add=True)
+
+    objects = RecipeQuerySet.as_manager()
 
     class Meta:
         verbose_name = const.VERBOSE_RECIPE_FIELD
@@ -114,48 +181,6 @@ class RecipeIngredient(models.Model):
 
     def __str__(self) -> str:
         return factories.make_model_str(f'Ингредиент-рецепт <id: {self.pk}>')
-
-
-class UserRecipeIntermediateAbstract(models.Model):
-    user = models.ForeignKey(User,
-                             on_delete=models.CASCADE,
-                             verbose_name='пользователь')
-
-    recipe = models.ForeignKey(Recipe,
-                               on_delete=models.CASCADE,
-                               verbose_name=const.VERBOSE_RECIPE_FIELD)
-
-    class Meta:
-        abstract = True
-
-    def __str__(self) -> str:
-        return factories.make_model_str(
-            f'Пользователь-{self._meta.verbose_name} <id: {self.pk}'
-        )
-
-
-class Favorite(UserRecipeIntermediateAbstract):
-    class Meta:
-        verbose_name = 'избранное'
-        verbose_name_plural = 'Избранные рецепты'
-        constraints = (
-            models.UniqueConstraint(
-                fields=('user', 'recipe'),
-                name='favorite:user_recipe_unique_together'
-            ),
-        )
-
-
-class ShoppingCart(UserRecipeIntermediateAbstract):
-    class Meta:
-        verbose_name = 'корзина покупок'
-        verbose_name_plural = 'Корзины покупок'
-        constraints = (
-            models.UniqueConstraint(
-                fields=('user', 'recipe'),
-                name='shopping_cart:user_recipe_unique_together'
-            ),
-        )
 
 
 class RecipeShortLink(models.Model):

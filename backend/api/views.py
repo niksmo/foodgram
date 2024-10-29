@@ -1,8 +1,8 @@
 from typing import Type
 
 from django.contrib.auth import get_user_model
-from django.db.models import Count, Exists, F, Model, OuterRef, Sum, Value
-from django.http.response import FileResponse, HttpResponseBase
+from django.db.models import Count, F, Model, Sum
+from django.http.response import FileResponse
 from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet as DjoserUserViewSet
 from rest_framework import status, viewsets
@@ -128,14 +128,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
     )
     lookup_url_kwarg = 'recipe_id'
     lookup_value_regex = LOOKUP_DIGIT_PATTERN
-    queryset = models.Recipe.objects.select_related(
-        'author'
-    ).prefetch_related(
-        'tags'
-    ).annotate(
-        is_favorited=Value(False),
-        is_in_shopping_cart=Value(False)
-    )
+    queryset = models.Recipe.objects.annotate_is_favorited_in_shopping_cart()
     serializer_class = RecipeReadSerializer
     filterset_class = RecipeListFilter
     permission_classes = [IsAuthenticatedOrReadOnly,
@@ -148,21 +141,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        if not self.request.auth:
-            return queryset
-
-        return queryset.annotate(
-            is_favorited=Exists(
-                models.Favorite.objects.filter(
-                    recipe=OuterRef('pk'), user=self.request.user
-                )
-            ),
-            is_in_shopping_cart=Exists(
-                models.ShoppingCart.objects.filter(
-                    recipe=OuterRef('pk'), user=self.request.user
-                )
+        if self.request.auth:
+            queryset = queryset.annotate_is_favorited_in_shopping_cart(
+                user_id=self.request.user.id
             )
-        )
+        return queryset
 
     @action((HttpMethod.GET,), detail=True,
             serializer_class=ShortLinkSerializer, url_path='get-link')
@@ -217,7 +200,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
     @action((HttpMethod.GET,), detail=False,
             permission_classes=(IsAuthenticated,))
-    def download_shopping_cart(self, request: Request) -> HttpResponseBase:
+    def download_shopping_cart(self, request: Request) -> FileResponse:
         ingredients = models.RecipeIngredient.objects.select_related(
             'ingredient'
         ).filter(

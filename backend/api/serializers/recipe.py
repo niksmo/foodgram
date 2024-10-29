@@ -2,7 +2,7 @@ from secrets import token_urlsafe
 from typing import Any
 
 from django.contrib.auth import get_user_model
-from django.db.models import Exists, Manager, OuterRef
+from django.db.models import Manager
 from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -11,8 +11,8 @@ from api.serializers.tag import TagSerializer
 from api.serializers.user import UserReadSerializer
 from core.const import (MIN_AMOUNT_VALUE, SHORT_LINK_SLUG_NBYTES,
                         SHORT_LINK_URL_PATH, SMALL_INTEGER_FIELD_MAX_VALUE)
-from foodgram.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
-                             RecipeShortLink, ShoppingCart, Tag)
+from foodgram.models import (Ingredient, Recipe, RecipeIngredient,
+                             RecipeShortLink, Tag)
 
 User = get_user_model()
 
@@ -121,21 +121,9 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
         return attrs
 
     def to_representation(self, instance):
-        user = self.context['request'].user
         return RecipeReadSerializer(
-            Recipe.objects.select_related(
-                'author'
-            ).prefetch_related(
-                'tags'
-            ).annotate(
-                is_favorited=Exists(Favorite.objects.filter(
-                    recipe=OuterRef('pk'),
-                    user=user
-                )),
-                is_in_shopping_cart=Exists(ShoppingCart.objects.filter(
-                    recipe=OuterRef('pk'),
-                    user=user
-                ))
+            Recipe.objects.annotate_is_favorited_in_shopping_cart(
+                user_id=self.context['request'].user.id
             ).get(pk=instance.pk),
             context=self.context
         ).data
