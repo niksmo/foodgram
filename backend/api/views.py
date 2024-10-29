@@ -7,7 +7,6 @@ from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet as DjoserUserViewSet
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import (IsAuthenticated,
                                         IsAuthenticatedOrReadOnly)
 from rest_framework.request import Request
@@ -19,8 +18,9 @@ from api.permissions import IsAuthorAdminOrReadOnly
 from api.serializers import (FavoriteSerializer, IngredientSerializer,
                              RecipeCreateUpdateSerializer,
                              RecipeReadSerializer, ShoppingCartSerializer,
-                             ShortLinkSerializer, SubscriptionSerializer,
-                             TagSerializer, UserAvatarSerializer)
+                             ShortLinkSerializer, SubscribeSerializer,
+                             SubscriptionSerializer, TagSerializer,
+                             UserAvatarSerializer)
 from core.const import LOOKUP_DIGIT_PATTERN, HttpMethod
 from core.factories import make_shopping_list
 from foodgram import models
@@ -66,15 +66,15 @@ class UserViewSet(DjoserUserViewSet):
             serializer_class=SubscriptionSerializer,
             permission_classes=(IsAuthenticated,))
     def subscriptions(self, request: Request) -> Response:
-        authors = User.objects.filter(
+        authors_qs = User.objects.filter(
             subscriptions_on_author__user=request.user
         ).annotate(recipes_count=Count('recipes')).all()
-        serializer = self.get_serializer(self.paginate_queryset(authors),
+        serializer = self.get_serializer(self.paginate_queryset(authors_qs),
                                          many=True)
         return self.get_paginated_response(serializer.data)
 
     @action((HttpMethod.POST,), detail=True,
-            serializer_class=SubscriptionSerializer,
+            serializer_class=SubscribeSerializer,
             permission_classes=(IsAuthenticated,))
     def subscribe(self, request: Request, id: str) -> Response:
         serializer = self.get_serializer(data={'author': id})

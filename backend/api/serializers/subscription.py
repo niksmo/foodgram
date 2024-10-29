@@ -1,10 +1,10 @@
-from typing import Union
+from typing import Any, Union
 
 from django.contrib.auth import get_user_model
 from django.db.models import Count
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from rest_framework.request import Request
+from rest_framework.request import QueryDict
 from rest_framework.utils.serializer_helpers import ReturnDict, ReturnList
 
 from api.serializers.common import CommonRecipeReadSerializer
@@ -16,49 +16,57 @@ User = get_user_model()
 
 
 class SubscriptionSerializer(UserReadSerializer):
-    author = serializers.PrimaryKeyRelatedField(
-        queryset=User.objects.annotate(recipes_count=Count('recipes')),
-        write_only=True
-    )
-    recipes = serializers.SerializerMethodField(read_only=True)
-    recipes_count = serializers.IntegerField(read_only=True)
-    is_subscribed = serializers.ReadOnlyField(default=True)
+    recipes = serializers.SerializerMethodField()
+    recipes_count = serializers.IntegerField()
 
     class Meta(UserReadSerializer.Meta):
-        fields = (
-            UserReadSerializer.Meta.fields
-            + ('is_subscribed', 'recipes', 'recipes_count', 'author')
-        )
+        fields = (UserReadSerializer.Meta.fields
+                  + ('is_subscribed', 'recipes', 'recipes_count'))
+
         read_only_fields = ('username', 'first_name',
                             'last_name', 'email', 'avatar')
 
-    def validate(self, data):
-        user = self.context['request'].user
-        author = data['author']
-        if user == author:
-            raise ValidationError('Пользователь и автор совпадают.')
-
-        if Subscription.objects.filter(user=user, author=author).exists():
-            raise ValidationError('Повторная подписка.')
-        return data
-
     def get_recipes(self, instance: UserType) -> Union[ReturnList, ReturnDict]:
         recipes_qs = instance.recipes.all()
-        request: Request = self.context['request']
+        query_params: QueryDict = self.context['request'].query_params
 
-        if ('recipes_limit' in request.query_params
-                and request.query_params['recipes_limit'].isdigit()):
-            limit = int(request.query_params['recipes_limit'])
-
-            if limit > 0:
+        try:
+            if ('recipes_limit' in query_params
+                    and (limit := int(query_params['recipes_limit']))):
                 recipes_qs = recipes_qs[:limit]
+        except ValueError:
+            pass
 
         return CommonRecipeReadSerializer(recipes_qs,
                                           many=True,
                                           context=self.context).data
 
-    def create(self, validated_data) -> UserType:
-        author = validated_data['author']
-        Subscription.objects.create(user=self.context['request'].user,
-                                    author=author)
-        return author
+
+class SubscribeSerializer(serializers.ModelSerializer):
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+
+    class Meta:
+        model = Subscription
+        fields = ('author', 'user')
+        validators = tuple()
+
+    def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
+        user = attrs['user']
+        author = attrs['author']
+        if user == author:
+            raise ValidationError('Пользователь и автор совпадают.')
+
+        if Subscription.objects.filter(user=user, author=author).exists():
+            raise ValidationError('Повторная подписка.')
+        return attrs
+
+    def to_representation(
+        self,
+        instance: Subscription
+    ) -> Union[ReturnList, ReturnDict]:
+        return SubscriptionSerializer(
+            User.objects.filter(
+                pk=instance.author.pk
+            ).annotate(recipes_count=Count('recipes')).get(),
+            context=self.context
+        ).data

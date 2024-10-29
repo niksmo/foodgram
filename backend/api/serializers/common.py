@@ -1,5 +1,6 @@
 from typing import Any
 
+from django.db.models import Model
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -31,6 +32,6 @@ class CommonFavoriteShopCartSerializer(serializers.ModelSerializer):
 
         return attrs
 
-    def to_representation(self, instance):
+    def to_representation(self, instance: Model):
         return CommonRecipeReadSerializer(instance.recipe,
                                           context=self.context).data
