@@ -21,7 +21,7 @@ from api.serializers import (FavoriteSerializer, IngredientSerializer,
                              RecipeReadSerializer, ShoppingCartSerializer,
                              ShortLinkSerializer, SubscriptionSerializer,
                              TagSerializer, UserAvatarSerializer)
-from core.const import LOOKUP_DIGIT_PATTERN, SHORT_LINK_URL_PATH, HttpMethod
+from core.const import LOOKUP_DIGIT_PATTERN, HttpMethod
 from core.factories import make_shopping_list
 from foodgram import models
 from users.models import Subscription
@@ -41,16 +41,16 @@ class UserViewSet(DjoserUserViewSet):
     lookup_value_regex = LOOKUP_DIGIT_PATTERN
     queryset = User.objects.all()
 
-    @action([HttpMethod.GET], detail=False,
-            permission_classes=[IsAuthenticated])
+    @action((HttpMethod.GET,), detail=False,
+            permission_classes=(IsAuthenticated,))
     def me(self, request: Request) -> Response:
         return Response(
             self.get_serializer(request.user).data, status=status.HTTP_200_OK
         )
 
-    @action([HttpMethod.PUT], url_path='me/avatar',
+    @action((HttpMethod.PUT,), url_path='me/avatar',
             detail=False, serializer_class=UserAvatarSerializer,
-            permission_classes=[IsAuthenticated])
+            permission_classes=(IsAuthenticated,))
     def avatar(self, request: Request) -> Response:
         serializer = self.get_serializer(request.user, data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -62,9 +62,9 @@ class UserViewSet(DjoserUserViewSet):
         request.user.avatar.delete(save=True)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @action(methods=[HttpMethod.GET], detail=False,
+    @action(methods=(HttpMethod.GET,), detail=False,
             serializer_class=SubscriptionSerializer,
-            permission_classes=[IsAuthenticated])
+            permission_classes=(IsAuthenticated,))
     def subscriptions(self, request: Request) -> Response:
         authors = User.objects.filter(
             subscriptions_on_author__user=request.user
@@ -73,9 +73,9 @@ class UserViewSet(DjoserUserViewSet):
                                          many=True)
         return self.get_paginated_response(serializer.data)
 
-    @action([HttpMethod.POST], detail=True,
+    @action((HttpMethod.POST,), detail=True,
             serializer_class=SubscriptionSerializer,
-            permission_classes=[IsAuthenticated])
+            permission_classes=(IsAuthenticated,))
     def subscribe(self, request: Request, id: str) -> Response:
         serializer = self.get_serializer(data={'author': id})
         serializer.is_valid(raise_exception=True)
@@ -85,14 +85,13 @@ class UserViewSet(DjoserUserViewSet):
     @subscribe.mapping.delete
     def unsubscribe(self, request: Request, id: str) -> Response:
         get_object_or_404(User, pk=id)
-        n_removed, _ = Subscription.objects.filter(
-            user=request.user, author_id=id
-        ).delete()
-
-        if not n_removed:
-            raise ValidationError({self.action: 'Подписка отсутствует.'})
-
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        n_removed, _ = Subscription.objects.filter(user=request.user,
+                                                   author_id=id).delete()
+        return Response(
+            data=None if n_removed else {'detail': 'Подписка отсутствует.'},
+            status=(status.HTTP_204_NO_CONTENT if n_removed
+                    else status.HTTP_400_BAD_REQUEST)
+        )
 
 
 class IngredientViewSet(viewsets.ReadOnlyModelViewSet):
@@ -143,7 +142,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
                           IsAuthorAdminOrReadOnly]
 
     def get_serializer_class(self) -> Type[BaseSerializer]:
-        if self.action == 'create' or self.action == 'partial_update':
+        if self.action in ('create', 'partial_update'):
             return RecipeCreateUpdateSerializer
         return super().get_serializer_class()
 
@@ -165,27 +164,17 @@ class RecipeViewSet(viewsets.ModelViewSet):
             )
         )
 
-    @action([HttpMethod.GET], detail=True,
+    @action((HttpMethod.GET,), detail=True,
             serializer_class=ShortLinkSerializer, url_path='get-link')
     def get_link(self, request: Request, recipe_id: str) -> Response:
         serializer = self.get_serializer(data={'recipe': recipe_id})
         serializer.is_valid(raise_exception=True)
-        recipe = serializer.validated_data['recipe']
-        try:
-            slug = recipe.link_slug.slug
-        except models.RecipeShortLink.DoesNotExist:
-            serializer.save()
-            slug = serializer.instance.slug
+        serializer.save()
+        return Response(serializer.data)
 
-        return Response(
-            {'short-link': request.build_absolute_uri(
-                f'/{SHORT_LINK_URL_PATH}{slug}'
-            )}
-        )
-
-    @action([HttpMethod.POST], detail=True,
+    @action((HttpMethod.POST,), detail=True,
             serializer_class=FavoriteSerializer,
-            permission_classes=[IsAuthenticatedOrReadOnly])
+            permission_classes=(IsAuthenticatedOrReadOnly,))
     def favorite(self, request: Request, recipe_id: str) -> Response:
         return self._add_fav_shop(request, recipe_id)
 
@@ -193,9 +182,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def delete_favorite(self, request: Request, recipe_id: str) -> Response:
         return self._delete_fav_shop(request, recipe_id, models.Favorite)
 
-    @action([HttpMethod.POST], detail=True,
+    @action((HttpMethod.POST,), detail=True,
             serializer_class=ShoppingCartSerializer,
-            permission_classes=[IsAuthenticatedOrReadOnly])
+            permission_classes=(IsAuthenticatedOrReadOnly,))
     def shopping_cart(self, request: Request, recipe_id: str) -> Response:
         return self._add_fav_shop(request, recipe_id)
 
@@ -222,8 +211,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @action([HttpMethod.GET], detail=False,
-            permission_classes=[IsAuthenticated])
+    @action((HttpMethod.GET,), detail=False,
+            permission_classes=(IsAuthenticated,))
     def download_shopping_cart(self, request: Request) -> HttpResponseBase:
         ingredients = models.RecipeIngredient.objects.select_related(
             'ingredient'

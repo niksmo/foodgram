@@ -10,7 +10,7 @@ from rest_framework.exceptions import ValidationError
 from api.serializers.tag import TagSerializer
 from api.serializers.user import UserReadSerializer
 from core.const import (MIN_AMOUNT_VALUE, SHORT_LINK_SLUG_NBYTES,
-                        SMALL_INTEGER_FIELD_MAX_VALUE)
+                        SHORT_LINK_URL_PATH, SMALL_INTEGER_FIELD_MAX_VALUE)
 from foodgram.models import (Favorite, Ingredient, Recipe, RecipeIngredient,
                              RecipeShortLink, ShoppingCart, Tag)
 
@@ -186,15 +186,26 @@ class ShortLinkSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ('slug',)
         extra_kwargs = {
-            'recipe': {'write_only': True}
+            'recipe': {'write_only': True,
+                       'validators': None}
         }
 
-    def create(self, validated_data):
-        while True:
-            slug = token_urlsafe(SHORT_LINK_SLUG_NBYTES)
-            if not RecipeShortLink.objects.filter(slug=slug).exists():
-                break
-        return RecipeShortLink.objects.create(
-            recipe=validated_data['recipe'],
-            slug=slug
-        )
+    def to_representation(self, instance: RecipeShortLink):
+        return {
+            'short-link': self.context['request'].build_absolute_uri(
+                f'/{SHORT_LINK_URL_PATH}{instance.slug}'
+            )
+        }
+
+    def create(self, validated_data: dict[str, Any]):
+        recipe = validated_data['recipe']
+        try:
+            instance = recipe.link_slug
+        except RecipeShortLink.DoesNotExist:
+            while True:
+                slug = token_urlsafe(SHORT_LINK_SLUG_NBYTES)
+                if not RecipeShortLink.objects.filter(slug=slug).exists():
+                    break
+            instance = RecipeShortLink.objects.create(recipe=recipe,
+                                                      slug=slug)
+        return instance
