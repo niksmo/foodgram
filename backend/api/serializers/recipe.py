@@ -55,8 +55,11 @@ class RecipeReadSerializer(serializers.ModelSerializer):
                                            many=True)
     author = UserReadSerializer()
 
-    is_favorited = serializers.BooleanField()
-    is_in_shopping_cart = serializers.BooleanField()
+    is_favorited = serializers.BooleanField(default=False,
+                                            read_only=True)
+
+    is_in_shopping_cart = serializers.BooleanField(default=False,
+                                                   read_only=True)
 
     class Meta:
         model = Recipe
@@ -99,20 +102,21 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
         errors = {}
+        tags = attrs.get('tags', None)
+        ingredients = attrs.get('ingredients', None)
 
-        if 'tags' not in attrs:
+        if tags is None:
             errors.update(tags=[self.error_messages['required']])
-        elif len(attrs['tags']) > len(set(attrs['tags'])):
+        elif len(tags) > len(set(tags)):
             errors.update(tags=[
-                self.default_error_messages['doubles'].format('Теги')
+                self.error_messages['doubles'].format('Теги')
             ])
 
-        if 'ingredients' not in attrs:
+        if ingredients is None:
             errors.update(ingredients=[self.error_messages['required']])
-        elif (len(attrs['ingredients'])
-              > len(set(item['id'] for item in attrs['ingredients']))):
+        elif (len(ingredients) > len(set(item['id'] for item in ingredients))):
             errors.update(ingredients=[
-                self.default_error_messages['doubles'].format('Ингредиенты')
+                self.error_messages['doubles'].format('Ингредиенты')
             ])
 
         if errors:

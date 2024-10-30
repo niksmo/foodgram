@@ -21,7 +21,7 @@ def make_model_str(field: str,
     if len(field) - max_length <= 0:
         return field
 
-    return (f'{field[:max_length - len(suffix)] }'
+    return (f'{field[:max_length - len(suffix)]}'
             f'{suffix}')
 
 

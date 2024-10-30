@@ -43,6 +43,10 @@ class SubscriptionSerializer(UserReadSerializer):
 
 
 class SubscribeSerializer(serializers.ModelSerializer):
+    author = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.annotate(recipes_count=Count('recipes'))
+    )
+
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
 
     class Meta:
@@ -64,9 +68,5 @@ class SubscribeSerializer(serializers.ModelSerializer):
         self,
         instance: Subscription
     ) -> Union[ReturnList, ReturnDict]:
-        return SubscriptionSerializer(
-            User.objects.filter(
-                pk=instance.author.pk
-            ).annotate(recipes_count=Count('recipes')).get(),
-            context=self.context
-        ).data
+        return SubscriptionSerializer(instance.author,
+                                      context=self.context).data

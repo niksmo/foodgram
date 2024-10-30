@@ -16,18 +16,9 @@ class UserReadSerializer(UserSerializer):
         fields = UserSerializer.Meta.fields + ('is_subscribed', 'avatar')
 
     def get_is_subscribed(self, author: UserType) -> bool:
-
         request: Request = self.context['request']
-        if not request.auth or request.user == author:
-            return False
-
-        if not hasattr(self, '_subs_authors_id'):
-            self._subs_authors_id = {
-                sub.author_id for sub
-                in request.user.subscriptions.all()
-            }
-
-        return author.pk in self._subs_authors_id
+        return (bool(request.auth)
+                and request.user.subscriptions.filter(author=author).exists())
 
 
 class UserAvatarSerializer(UserSerializer):

@@ -1,7 +1,7 @@
 from typing import Type
 
 from django.contrib.auth import get_user_model
-from django.db.models import Count, F, Model, Sum
+from django.db.models import Count, F, Model, QuerySet, Sum, Value
 from django.http.response import FileResponse
 from django.shortcuts import get_object_or_404
 from djoser.views import UserViewSet as DjoserUserViewSet
@@ -21,7 +21,8 @@ from api.serializers import (FavoriteSerializer, IngredientSerializer,
                              ShortLinkSerializer, SubscribeSerializer,
                              SubscriptionSerializer, TagSerializer,
                              UserAvatarSerializer)
-from core.const import LOOKUP_DIGIT_PATTERN, HttpMethod
+from core.const import (LOOKUP_DIGIT_PATTERN, ORDER_BY_CREATED_AT_DESC,
+                        HttpMethod)
 from core.factories import make_shopping_list
 from foodgram import models
 from users.models import Subscription
@@ -68,7 +69,7 @@ class UserViewSet(DjoserUserViewSet):
     def subscriptions(self, request: Request) -> Response:
         authors_qs = User.objects.filter(
             subscriptions_on_author__user=request.user
-        ).annotate(recipes_count=Count('recipes')).all()
+        ).annotate(recipes_count=Count('recipes')).order_by('username')
         serializer = self.get_serializer(self.paginate_queryset(authors_qs),
                                          many=True)
         return self.get_paginated_response(serializer.data)
@@ -128,23 +129,32 @@ class RecipeViewSet(viewsets.ModelViewSet):
     )
     lookup_url_kwarg = 'recipe_id'
     lookup_value_regex = LOOKUP_DIGIT_PATTERN
-    queryset = models.Recipe.objects.annotate_is_favorited_in_shopping_cart()
     serializer_class = RecipeReadSerializer
     filterset_class = RecipeListFilter
-    permission_classes = [IsAuthenticatedOrReadOnly,
-                          IsAuthorAdminOrReadOnly]
+    permission_classes = (IsAuthenticatedOrReadOnly,
+                          IsAuthorAdminOrReadOnly)
 
     def get_serializer_class(self) -> Type[BaseSerializer]:
         if self.action in ('create', 'partial_update'):
             return RecipeCreateUpdateSerializer
         return super().get_serializer_class()
 
-    def get_queryset(self):
-        queryset = super().get_queryset()
+    def get_queryset(self) -> QuerySet:
+        queryset = models.Recipe.objects.select_related(
+            'author'
+        ).prefetch_related(
+            'tags',
+            'ingredients'
+        ).annotate(
+            is_favorited=Value(False),
+            is_in_shopping_cart=Value(False)
+        ).order_by(ORDER_BY_CREATED_AT_DESC)
+
         if self.request.auth:
             queryset = queryset.annotate_is_favorited_in_shopping_cart(
                 user_id=self.request.user.id
             )
+
         return queryset
 
     @action((HttpMethod.GET,), detail=True,

@@ -2,6 +2,8 @@
 
 # Проект Foodgram
 
+Задеплоен и доступен по URL https://foodgram.nks-tech.ru
+
 ## Функции:
 
 - Авторизация

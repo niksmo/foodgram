@@ -21,13 +21,14 @@ class CommonFavoriteShopCartSerializer(serializers.ModelSerializer):
         validators = tuple()
 
     def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
-        if self.Meta.model.objects.filter(
+        model = self.Meta.model
+
+        if model.objects.filter(
             user=attrs['user'],
             recipe=attrs['recipe']
         ).exists():
             raise ValidationError(
-                'Рецепт уже добавлен в '
-                f'`{self.Meta.model._meta.verbose_name.title()}`.'
+                f'Рецепт уже добавлен в `{model._meta.verbose_name.title()}`.'
             )
 
         return attrs
