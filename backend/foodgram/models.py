@@ -1,9 +1,7 @@
-from typing import Optional
-
 from django.contrib.auth import get_user_model
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.db.models import Exists, OuterRef, Value
+from django.db.models import Exists, OuterRef
 
 from core import const, factories
 
@@ -96,21 +94,18 @@ class ShoppingCart(UserRecipeIntermediateAbstract):
 class RecipeQuerySet(models.QuerySet):
     def annotate_is_favorited_in_shopping_cart(
         self, *,
-        user_id: Optional[int] = None
+        user_id: int
     ) -> models.QuerySet:
-        is_favorited = Value(False)
-        is_in_shopping_cart = Value(False)
-        if user_id:
-            is_favorited = Exists(
-                Favorite.objects.filter(recipe=OuterRef('pk'),
-                                        user_id=user_id)
-            )
-            is_in_shopping_cart = Exists(
-                ShoppingCart.objects.filter(recipe=OuterRef('pk'),
-                                            user_id=user_id)
-            )
-        return self.annotate(is_favorited=is_favorited,
-                             is_in_shopping_cart=is_in_shopping_cart)
+        return self.annotate(
+            is_favorited=Exists(Favorite.objects.filter(
+                recipe=OuterRef('pk'),
+                user_id=user_id
+            )),
+            is_in_shopping_cart=Exists(ShoppingCart.objects.filter(
+                recipe=OuterRef('pk'),
+                user_id=user_id
+            ))
+        ).order_by(const.ORDER_BY_CREATED_AT_DESC)
 
 
 class Recipe(models.Model):
@@ -148,7 +143,7 @@ class Recipe(models.Model):
     class Meta:
         verbose_name = const.VERBOSE_RECIPE_FIELD
         verbose_name_plural = 'Рецепты'
-        ordering = ('-created_at',)
+        ordering = (const.ORDER_BY_CREATED_AT_DESC,)
 
     def __str__(self) -> str:
         return factories.make_model_str(self.name)
