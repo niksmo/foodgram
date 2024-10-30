@@ -8,3 +8,4 @@ venv
 .env
 README.md
 media/
+db.sqlite3
