@@ -150,9 +150,11 @@ class RecipeViewSet(viewsets.ModelViewSet):
             is_in_shopping_cart=Value(False)
         ).order_by(ORDER_BY_CREATED_AT_DESC)
 
-        if self.request.auth:
+        request = self.request
+
+        if request.auth:
             queryset = queryset.annotate_is_favorited_in_shopping_cart(
-                user_id=self.request.user.id
+                user_id=request.user.id
             )
 
         return queryset

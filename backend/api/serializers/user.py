@@ -17,8 +17,11 @@ class UserReadSerializer(UserSerializer):
 
     def get_is_subscribed(self, author: UserType) -> bool:
         request: Request = self.context['request']
-        return (bool(request.auth)
-                and request.user.subscriptions.filter(author=author).exists())
+        return (
+            request
+            and request.auth is not None
+            and request.user.subscriptions.filter(author=author).exists()
+        )
 
 
 class UserAvatarSerializer(UserSerializer):

@@ -55,10 +55,10 @@ class RecipeReadSerializer(serializers.ModelSerializer):
                                            many=True)
     author = UserReadSerializer()
 
-    is_favorited = serializers.BooleanField(default=False,
+    is_favorited = serializers.BooleanField(default=0,
                                             read_only=True)
 
-    is_in_shopping_cart = serializers.BooleanField(default=False,
+    is_in_shopping_cart = serializers.BooleanField(default=0,
                                                    read_only=True)
 
     class Meta:
